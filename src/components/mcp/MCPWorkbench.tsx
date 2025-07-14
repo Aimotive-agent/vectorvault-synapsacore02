@@ -27,18 +27,58 @@ export const MCPWorkbench = () => {
   // AI Settings from database
   const { settings: aiSettings, saveSettings, setSettings: setAiSettings } = useAISettings();
 
-  // Available models (these would normally come from API calls in AISettingsCard)
+  // Enhanced available models with comprehensive lists
   const availableModels = [
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000 },
     { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000 },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000 },
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000 },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16000 }
+    { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo Preview', context_window: 128000 },
+    { id: 'gpt-4', name: 'GPT-4', context_window: 8192 },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385 },
+    { id: 'gpt-3.5-turbo-16k', name: 'GPT-3.5 Turbo 16K', context_window: 16385 }
   ];
 
   const openrouterModels = [
+    // OpenAI Models via OpenRouter
+    { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000 },
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', context_length: 128000 },
+    { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo (OpenRouter)', context_length: 128000 },
+    { id: 'openai/gpt-4', name: 'GPT-4 (OpenRouter)', context_length: 8192 },
+    { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo (OpenRouter)', context_length: 16385 },
+    
+    // Anthropic Claude Models
+    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000 },
     { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', context_length: 200000 },
     { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', context_length: 200000 },
-    { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000 }
+    { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', context_length: 200000 },
+    
+    // Google Models
+    { id: 'google/gemini-pro', name: 'Gemini Pro', context_length: 128000 },
+    { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', context_length: 1000000 },
+    { id: 'google/gemma-7b-it', name: 'Gemma 7B', context_length: 8192 },
+    
+    // Meta Llama Models
+    { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', context_length: 128000 },
+    { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', context_length: 128000 },
+    { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', context_length: 128000 },
+    { id: 'meta-llama/llama-3-70b-instruct', name: 'Llama 3 70B', context_length: 8192 },
+    { id: 'meta-llama/llama-3-8b-instruct', name: 'Llama 3 8B', context_length: 8192 },
+    
+    // Mistral Models
+    { id: 'mistralai/mistral-large', name: 'Mistral Large', context_length: 128000 },
+    { id: 'mistralai/mistral-medium', name: 'Mistral Medium', context_length: 32000 },
+    { id: 'mistralai/mistral-small', name: 'Mistral Small', context_length: 32000 },
+    { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', context_length: 32000 },
+    { id: 'mistralai/mixtral-8x22b-instruct', name: 'Mixtral 8x22B', context_length: 64000 },
+    
+    // Cohere Models
+    { id: 'cohere/command-r-plus', name: 'Command R+', context_length: 128000 },
+    { id: 'cohere/command-r', name: 'Command R', context_length: 128000 },
+    
+    // Perplexity Models (with online search)
+    { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Perplexity Sonar Large (Online)', context_length: 127072 },
+    { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small (Online)', context_length: 127072 },
+    { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge (Online)', context_length: 127072 },
   ];
 
   // Handle settings change with database persistence
