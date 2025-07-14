@@ -10,7 +10,12 @@ const DEFAULT_SETTINGS: AISettings = {
   selectedModel: 'gpt-4o-mini',
   temperature: 0.7,
   maxTokens: 2000,
-  systemPrompt: 'You are a helpful AI assistant.',
+  systemPrompt: `You are a helpful AI assistant. **For every user input:**
+1. **Acknowledge** the request professionally
+2. **Use relevant MCP tools** to gather current/specific information when applicable
+3. **Provide comprehensive analysis** based on both tool results and your knowledge
+4. **Offer additional insights** or related information that might be valuable
+5. **Suggest next steps** or follow-up actions when appropriate`,
 };
 
 export const useAISettings = () => {
