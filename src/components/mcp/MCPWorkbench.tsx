@@ -6,6 +6,7 @@ import { AvailableTools } from './AvailableTools';
 import { AISettingsCard } from './AISettingsCard';
 import { AIChat } from './AIChat';
 import { ActivityLog } from './ActivityLog';
+import { useAISettings } from '@/hooks/useAISettings';
 import { Bot, Settings, Server, Wrench, MessageSquare, Activity, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,16 +24,8 @@ export const MCPWorkbench = () => {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
-  // AI Settings state
-  const [aiSettings, setAiSettings] = useState<AISettings>({
-    openaiApiKey: '',
-    openrouterApiKey: '',
-    provider: 'openai',
-    selectedModel: 'gpt-4o-mini',
-    temperature: 0.7,
-    maxTokens: 1000,
-    systemPrompt: 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
-  });
+  // AI Settings from database
+  const { settings: aiSettings, saveSettings, setSettings: setAiSettings } = useAISettings();
 
   // Available models (these would normally come from API calls in AISettingsCard)
   const availableModels = [
@@ -48,32 +41,11 @@ export const MCPWorkbench = () => {
     { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000 }
   ];
 
-  // Load settings from localStorage
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('mcp-ai-settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        // Ensure backward compatibility by providing defaults for new properties
-        setAiSettings({
-          openaiApiKey: parsed.openaiApiKey || '',
-          openrouterApiKey: parsed.openrouterApiKey || '',
-          provider: parsed.provider || 'openai',
-          selectedModel: parsed.selectedModel || 'gpt-4o-mini',
-          temperature: parsed.temperature || 0.7,
-          maxTokens: parsed.maxTokens || 1000,
-          systemPrompt: parsed.systemPrompt || 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
-        });
-      } catch (error) {
-        console.error('Failed to load saved settings:', error);
-      }
-    }
-  }, []);
-
-  // Save settings to localStorage
-  useEffect(() => {
-    localStorage.setItem('mcp-ai-settings', JSON.stringify(aiSettings));
-  }, [aiSettings]);
+  // Handle settings change with database persistence
+  const handleSettingsChange = (newSettings: AISettings) => {
+    setAiSettings(newSettings);
+    saveSettings(newSettings);
+  };
 
   // Initialize with welcome log
   useEffect(() => {
@@ -530,7 +502,7 @@ export const MCPWorkbench = () => {
           <TabsContent value="settings" className="space-y-6">
             <AISettingsCard 
               settings={aiSettings}
-              onSettingsChange={setAiSettings}
+              onSettingsChange={handleSettingsChange}
               onLog={addLog}
             />
           </TabsContent>
@@ -540,7 +512,7 @@ export const MCPWorkbench = () => {
               servers={servers}
               tools={tools}
               settings={aiSettings}
-              onSettingsChange={setAiSettings}
+              onSettingsChange={handleSettingsChange}
               availableModels={availableModels}
               openrouterModels={openrouterModels}
               onLog={addLog}

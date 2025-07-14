@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          file_attachments: Json | null
+          id: string
+          model_used: string | null
+          provider_used: string | null
+          role: string
+          session_id: string
+          tool_calls: Json | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          file_attachments?: Json | null
+          id?: string
+          model_used?: string | null
+          provider_used?: string | null
+          role: string
+          session_id: string
+          tool_calls?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          file_attachments?: Json | null
+          id?: string
+          model_used?: string | null
+          provider_used?: string | null
+          role?: string
+          session_id?: string
+          tool_calls?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_settings: {
+        Row: {
+          created_at: string
+          id: string
+          max_tokens: number | null
+          openai_api_key: string | null
+          openrouter_api_key: string | null
+          provider: string
+          selected_model: string
+          system_prompt: string | null
+          temperature: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_tokens?: number | null
+          openai_api_key?: string | null
+          openrouter_api_key?: string | null
+          provider?: string
+          selected_model?: string
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_tokens?: number | null
+          openai_api_key?: string | null
+          openrouter_api_key?: string | null
+          provider?: string
+          selected_model?: string
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string

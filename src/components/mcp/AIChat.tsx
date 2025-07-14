@@ -7,9 +7,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle, Copy, Check, Brain, Settings } from 'lucide-react';
+import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle, Copy, Check, Brain, Settings, Plus, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, MCPTool, MCPServer, AISettings, ToolCall, OpenAIModel, OpenRouterModel } from '@/types/mcp';
+import { useChatSessions } from '@/hooks/useChatSessions';
+import { FileUpload } from './FileUpload';
 import { formatDistanceToNow } from 'date-fns';
 
 interface AIChatProps {
@@ -23,12 +25,24 @@ interface AIChatProps {
 }
 
 export const AIChat = ({ servers, tools, settings, onSettingsChange, availableModels, openrouterModels, onLog }: AIChatProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Use chat sessions hook
+  const {
+    sessions,
+    currentSessionId,
+    messages,
+    createSession,
+    loadMessages,
+    saveMessage,
+    deleteSession,
+    setMessages
+  } = useChatSessions();
 
   // Get current API key based on provider
   const currentApiKey = settings.provider === 'openrouter' 
@@ -53,9 +67,9 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     }
   }, [messages]);
 
-  // Initialize with welcome message
+  // Initialize with welcome message or create new session
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !currentSessionId) {
       const welcomeMessage: ChatMessage = {
         id: '1',
         role: 'assistant',
@@ -64,7 +78,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       };
       setMessages([welcomeMessage]);
     }
-  }, [tools.length, servers.length]);
+  }, [tools.length, servers.length, messages.length, currentSessionId]);
 
   const callOpenAI = async (messages: ChatMessage[]): Promise<{ content: string; toolCalls?: ToolCall[] }> => {
     const apiKey = settings.provider === 'openrouter' 
@@ -328,6 +342,14 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isProcessing) return;
 
+    // Create session if none exists
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      const newSession = await createSession();
+      sessionId = newSession?.id;
+      if (!sessionId) return;
+    }
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -338,6 +360,9 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsProcessing(true);
+
+    // Save user message to database
+    await saveMessage(userMessage, sessionId, settings.selectedModel, settings.provider);
 
     try {
       onLog('💬 Processing message with AI...', 'info', '💬');
@@ -355,6 +380,9 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
       setMessages(prev => [...prev, aiMessage]);
       
+      // Save AI message to database
+      await saveMessage(aiMessage, sessionId, settings.selectedModel, settings.provider);
+      
       if (aiResponse.toolCalls && aiResponse.toolCalls.length > 0) {
         onLog(`✅ AI response generated with ${aiResponse.toolCalls.length} tool calls`, 'success', '✅');
       } else {
@@ -370,6 +398,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       };
 
       setMessages(prev => [...prev, errorMessage]);
+      await saveMessage(errorMessage, sessionId, settings.selectedModel, settings.provider);
       onLog(`❌ AI processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌');
     } finally {
       setIsProcessing(false);
@@ -426,6 +455,20 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
            servers.some(s => s.status === 'connected');
   };
 
+  const handleFileAnalyzed = (analysis: string, fileName: string) => {
+    const fileMessage = `📁 **File uploaded: ${fileName}**\n\n${analysis}`;
+    setInputMessage(prev => prev + (prev ? '\n\n' : '') + fileMessage);
+    setShowFileUpload(false);
+  };
+
+  const handleNewChat = async () => {
+    await createSession();
+  };
+
+  const handleLoadSession = async (sessionId: string) => {
+    await loadMessages(sessionId);
+  };
+
   return (
     <Card className="bg-gradient-surface border shadow-soft">
       <CardHeader>
@@ -476,6 +519,57 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Chat Session Management */}
+        <div className="flex gap-2 pb-2 border-b">
+          <Button
+            onClick={handleNewChat}
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-1"
+          >
+            <Plus className="h-3 w-3" />
+            New Chat
+          </Button>
+          
+          {sessions.length > 0 && (
+            <Select value={currentSessionId || ''} onValueChange={handleLoadSession}>
+              <SelectTrigger className="h-8 min-w-[200px] text-xs">
+                <SelectValue placeholder="Select a chat session" />
+              </SelectTrigger>
+              <SelectContent>
+                {sessions.map((session) => (
+                  <SelectItem key={session.id} value={session.id}>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm">{session.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(session.updated_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          <Button
+            onClick={() => setShowFileUpload(!showFileUpload)}
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-1 ml-auto"
+          >
+            <Upload className="h-3 w-3" />
+            Upload File
+          </Button>
+        </div>
+
+        {/* File Upload Section */}
+        {showFileUpload && (
+          <FileUpload
+            onFileAnalyzed={handleFileAnalyzed}
+            className="mb-4"
+          />
+        )}
+        
         {/* Chat Messages */}
         <div className="h-96 border rounded-lg bg-muted/30">
           <ScrollArea ref={scrollAreaRef} className="h-full p-4">
