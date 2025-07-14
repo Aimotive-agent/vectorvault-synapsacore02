@@ -234,7 +234,43 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType?.includes('text/event-stream')) {
+        // Handle SSE response
+        const text = await response.text();
+        onLog(`📥 SSE Response received`, 'info', '📥');
+        
+        // Parse SSE format - look for data: lines
+        const lines = text.split('\n');
+        let jsonData = null;
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const dataStr = line.substring(6).trim();
+              if (dataStr && dataStr !== '[DONE]') {
+                jsonData = JSON.parse(dataStr);
+                break;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+        
+        if (jsonData) {
+          data = jsonData;
+          onLog(`✅ Parsed SSE data successfully`, 'success', '✅');
+        } else {
+          throw new Error('No valid JSON data found in SSE response');
+        }
+      } else {
+        // Handle regular JSON response
+        data = await response.json();
+        onLog(`📥 JSON Response received`, 'info', '📥');
+      }
       
       if (data.error) {
         onLog(`❌ Tool error: ${data.error.message}`, 'error', '❌');
