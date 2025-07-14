@@ -448,11 +448,12 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       ? settings.openrouterApiKey 
       : settings.openaiApiKey;
     
-    return inputMessage.trim() && 
+    // Basic requirements for sending a message
+    return inputMessage.trim().length > 0 && 
            !isProcessing && 
            hasApiKey && 
-           settings.selectedModel &&
-           servers.some(s => s.status === 'connected');
+           settings.selectedModel;
+    // Removed the server requirement to allow basic AI chat without MCP tools
   };
 
   const handleFileAnalyzed = (analysis: string, fileName: string) => {
@@ -694,6 +695,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
               disabled={!canSendMessage()}
               size="sm"
               className="px-4"
+              type="button"
             >
               {isProcessing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
