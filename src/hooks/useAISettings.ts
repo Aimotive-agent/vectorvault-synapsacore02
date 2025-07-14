@@ -46,15 +46,20 @@ export const useAISettings = () => {
       }
 
        if (data) {
-         setSettings({
+         const loadedSettings = {
            openaiApiKey: data.openai_api_key || '',
            openrouterApiKey: data.openrouter_api_key || '',
            provider: data.provider as 'openai' | 'openrouter',
-           selectedModel: data.selected_model,
-           temperature: data.temperature,
-           maxTokens: data.max_tokens,
+           selectedModel: data.selected_model || DEFAULT_SETTINGS.selectedModel,
+           temperature: data.temperature || DEFAULT_SETTINGS.temperature,
+           maxTokens: data.max_tokens || DEFAULT_SETTINGS.maxTokens,
            systemPrompt: data.system_prompt || DEFAULT_SETTINGS.systemPrompt,
-         });
+         };
+         console.log('Loading AI settings:', loadedSettings);
+         setSettings(loadedSettings);
+       } else {
+         console.log('No saved settings found, using defaults');
+         setSettings(DEFAULT_SETTINGS);
        }
     } catch (error) {
       console.error('Error loading AI settings:', error);

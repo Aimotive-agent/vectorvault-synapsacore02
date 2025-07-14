@@ -35,6 +35,16 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
 
+  // Debug log to see what's happening with settings
+  useEffect(() => {
+    console.log('AISettingsCard settings updated:', {
+      provider: settings.provider,
+      selectedModel: settings.selectedModel,
+      hasOpenAI: !!settings.openaiApiKey,
+      hasOpenRouter: !!settings.openrouterApiKey
+    });
+  }, [settings]);
+
   // Effect to save settings when they change
   useEffect(() => {
     // Auto-save settings when they change
@@ -336,7 +346,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
             Model Selection
           </Label>
           <Select 
-            value={settings.selectedModel} 
+            value={settings.selectedModel || ''} 
             onValueChange={handleModelChange}
           >
             <SelectTrigger>
