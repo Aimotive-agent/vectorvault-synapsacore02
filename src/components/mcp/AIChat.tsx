@@ -25,6 +25,11 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Get current API key based on provider
+  const currentApiKey = settings.provider === 'openrouter' 
+    ? settings.openrouterApiKey 
+    : settings.openaiApiKey;
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -49,8 +54,12 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
   }, [tools.length, servers.length]);
 
   const callOpenAI = async (messages: ChatMessage[]): Promise<{ content: string; toolCalls?: ToolCall[] }> => {
-    if (!settings.openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+    const apiKey = settings.provider === 'openrouter' 
+      ? settings.openrouterApiKey 
+      : settings.openaiApiKey;
+      
+    if (!apiKey) {
+      throw new Error(`${settings.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key not configured`);
     }
 
     const systemMessage = {
@@ -101,14 +110,6 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
     const apiUrl = settings.provider === 'openrouter' 
       ? 'https://openrouter.ai/api/v1/chat/completions'
       : 'https://api.openai.com/v1/chat/completions';
-    
-    const apiKey = settings.provider === 'openrouter' 
-      ? settings.openrouterApiKey 
-      : settings.openaiApiKey;
-
-    if (!apiKey) {
-      throw new Error(`${settings.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key not configured`);
-    }
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -553,9 +554,9 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
           
           {/* Status Messages */}
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {!settings.openaiApiKey && (
+            {!currentApiKey && (
               <Badge variant="outline" className="text-warning border-warning/50">
-                ⚠️ OpenAI API key required
+                ⚠️ {settings.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key required
               </Badge>
             )}
             {servers.filter(s => s.status === 'connected').length === 0 && (
