@@ -191,35 +191,49 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
 
     onLog(`🔧 Executing tool: ${toolName}`, 'info', '🔧');
 
-    const response = await fetch(tool.serverUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream'
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: Date.now(),
-        method: 'tools/call',
-        params: {
-          name: toolName,
-          arguments: parameters
-        }
-      })
-    });
+    try {
+      const response = await fetch(tool.serverUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream',
+          'Origin': window.location.origin
+        },
+        mode: 'cors',
+        credentials: 'omit',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: toolName,
+            arguments: parameters
+          }
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        onLog(`❌ HTTP ${response.status}: ${errorText}`, 'error', '❌');
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        onLog(`❌ Tool error: ${data.error.message}`, 'error', '❌');
+        throw new Error(data.error.message || 'Tool execution failed');
+      }
+
+      onLog(`✅ Tool executed successfully`, 'success', '✅');
+      return data.result;
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        onLog(`❌ Network error: Failed to reach MCP server. Check if the server URL is correct and accessible.`, 'error', '❌');
+        throw new Error('Network error: Cannot reach MCP server. Please check the server URL and ensure it supports CORS.');
+      }
+      throw error;
     }
-
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(data.error.message || 'Tool execution failed');
-    }
-
-    onLog(`✅ Tool ${toolName} executed successfully`, 'success', '✅');
-    return data.result;
   };
 
   const handleSendMessage = async () => {
