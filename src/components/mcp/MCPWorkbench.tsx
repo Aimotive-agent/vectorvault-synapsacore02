@@ -181,23 +181,24 @@ export const MCPWorkbench = () => {
 
   const parseToolsResponse = (data: any): MCPTool[] => {
     addLog(`🔍 Raw server response: ${JSON.stringify(data, null, 2)}`, 'info', '🔍', 'Tool Discovery');
+    addLog(`🔍 Data type: ${typeof data}, isArray: ${Array.isArray(data)}`, 'info', '🔍', 'Tool Discovery');
     
     let discoveredTools: MCPTool[] = [];
     
     // Check multiple possible response formats
     if (data.tools && Array.isArray(data.tools)) {
       discoveredTools = data.tools;
-      addLog(`✅ Found tools in data.tools format`, 'success', '✅', 'Tool Discovery');
+      addLog(`✅ Found ${discoveredTools.length} tools in data.tools format`, 'success', '✅', 'Tool Discovery');
     } else if (Array.isArray(data)) {
       discoveredTools = data;
-      addLog(`✅ Found tools in array format`, 'success', '✅', 'Tool Discovery');
+      addLog(`✅ Found ${discoveredTools.length} tools in array format`, 'success', '✅', 'Tool Discovery');
     } else if (data.result && Array.isArray(data.result.tools)) {
       discoveredTools = data.result.tools;
-      addLog(`✅ Found tools in data.result.tools format`, 'success', '✅', 'Tool Discovery');
+      addLog(`✅ Found ${discoveredTools.length} tools in data.result.tools format`, 'success', '✅', 'Tool Discovery');
     } else if (data.result && data.result.tools) {
       // Handle case where tools might be an object instead of array
       discoveredTools = Object.values(data.result.tools);
-      addLog(`✅ Found tools in data.result.tools object format`, 'success', '✅', 'Tool Discovery');
+      addLog(`✅ Found ${discoveredTools.length} tools in data.result.tools object format`, 'success', '✅', 'Tool Discovery');
     } else {
       // Try to extract tools from various possible formats
       addLog(`🔄 Searching through response for tool arrays...`, 'info', '🔄', 'Tool Discovery');

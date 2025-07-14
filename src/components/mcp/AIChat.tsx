@@ -72,6 +72,7 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
 
     // Only add tools if we have them available
     if (tools.length > 0) {
+      console.log(`🔧 AIChat: Setting up ${tools.length} tools for OpenAI:`, tools.map(t => ({ name: t.name, description: t.description, serverId: t.serverId })));
       (requestBody as any).tools = tools.map(tool => ({
         type: 'function',
         function: {
@@ -89,6 +90,9 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
         }
       }));
       (requestBody as any).tool_choice = 'auto';
+      console.log(`🤖 OpenAI request body tools:`, (requestBody as any).tools);
+    } else {
+      console.log(`⚠️ AIChat: No tools available for OpenAI`);
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
