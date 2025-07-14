@@ -16,9 +16,9 @@ interface MCPServerFormProps {
 
 const PRESET_SERVERS: PresetMCPServer[] = [
   {
-    name: "Pipedream Tools",
-    url: "https://api.pipedream.com/v1/components",
-    description: "Access to Pipedream's extensive component library and workflow tools",
+    name: "Pipedream Workflow (Example)",
+    url: "https://your-unique-id.m.pipedream.net",
+    description: "Replace with YOUR actual Pipedream workflow URL. Find it in your Pipedream dashboard → Your Workflow → Copy URL",
     category: "Automation",
     features: ["Workflow automation", "API integrations", "Data processing", "Event handling"],
     documentation: "https://pipedream.com/docs"
