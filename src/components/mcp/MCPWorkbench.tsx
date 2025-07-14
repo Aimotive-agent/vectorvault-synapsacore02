@@ -547,8 +547,6 @@ export const MCPWorkbench = () => {
             settings={aiSettings}
             onSettingsChange={handleSettingsChange}
             onLog={addLog}
-            availableModels={availableModels}
-            openrouterModels={openrouterModels}
           />
           </TabsContent>
 

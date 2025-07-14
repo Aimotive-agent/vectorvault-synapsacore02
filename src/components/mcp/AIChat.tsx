@@ -49,9 +49,23 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     ? settings.openrouterApiKey 
     : settings.openaiApiKey;
   
-  // Get current models based on provider
+  // Get current models based on provider - use comprehensive lists
   const getCurrentModels = () => {
-    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
+    if (settings.provider === 'openrouter') {
+      return openrouterModels.length > 0 ? openrouterModels : [
+        // Fallback OpenRouter models if none provided
+        { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000 },
+        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', context_length: 128000 },
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000 },
+      ];
+    } else {
+      return availableModels.length > 0 ? availableModels : [
+        // Fallback OpenAI models if none provided
+        { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000 },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000 },
+        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000 },
+      ];
+    }
   };
   
   const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);

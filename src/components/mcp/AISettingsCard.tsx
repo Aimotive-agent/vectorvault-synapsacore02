@@ -16,29 +16,73 @@ interface AISettingsCardProps {
   settings: AISettings;
   onSettingsChange: (settings: AISettings) => void;
   onLog: (message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string) => void;
-  availableModels: OpenAIModel[];
-  openrouterModels: OpenRouterModel[];
 }
 
 const DEFAULT_MODELS: OpenAIModel[] = [
-  { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4', name: 'GPT-4', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
+  { id: 'gpt-4.1-2025-04-14', name: 'GPT-4.1 (Latest)', context_window: 128000, pricing: { input: 0.0025, output: 0.01 } },
+  { id: 'o3-2025-04-16', name: 'o3 (Reasoning)', context_window: 128000, pricing: { input: 0.06, output: 0.24 } },
+  { id: 'o4-mini-2025-04-16', name: 'o4 Mini (Fast Reasoning)', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
   { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000, pricing: { input: 0.005, output: 0.015 } },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
+  { id: 'gpt-4', name: 'GPT-4', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
 ];
 
-export const AISettingsCard = ({ settings, onSettingsChange, onLog, availableModels: propAvailableModels, openrouterModels: propOpenrouterModels }: AISettingsCardProps) => {
-  // Always use the full model lists from props, don't replace them
+const DEFAULT_OPENROUTER_MODELS: OpenRouterModel[] = [
+  // OpenAI Models via OpenRouter
+  { id: 'openai/gpt-4.1-2025-04-14', name: 'GPT-4.1 (OpenRouter)', context_length: 128000, pricing: { prompt: 0.0025, completion: 0.01 } },
+  { id: 'openai/o3-2025-04-16', name: 'o3 Reasoning (OpenRouter)', context_length: 128000, pricing: { prompt: 0.06, completion: 0.24 } },
+  { id: 'openai/o4-mini-2025-04-16', name: 'o4 Mini (OpenRouter)', context_length: 128000, pricing: { prompt: 0.00015, completion: 0.0006 } },
+  { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000, pricing: { prompt: 0.005, completion: 0.015 } },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', context_length: 128000, pricing: { prompt: 0.00015, completion: 0.0006 } },
+  { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo (OpenRouter)', context_length: 128000, pricing: { prompt: 0.01, completion: 0.03 } },
+  { id: 'openai/gpt-4', name: 'GPT-4 (OpenRouter)', context_length: 8192, pricing: { prompt: 0.03, completion: 0.06 } },
+  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo (OpenRouter)', context_length: 16385, pricing: { prompt: 0.001, completion: 0.002 } },
+  
+  // Anthropic Claude Models
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
+  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', context_length: 200000, pricing: { prompt: 0.015, completion: 0.075 } },
+  { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
+  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', context_length: 200000, pricing: { prompt: 0.00025, completion: 0.00125 } },
+  
+  // Google Models
+  { id: 'google/gemini-pro', name: 'Gemini Pro', context_length: 128000, pricing: { prompt: 0.0005, completion: 0.0015 } },
+  { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', context_length: 1000000, pricing: { prompt: 0.0005, completion: 0.0015 } },
+  { id: 'google/gemma-7b-it', name: 'Gemma 7B', context_length: 8192, pricing: { prompt: 0.0001, completion: 0.0001 } },
+  
+  // Meta Llama Models
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', context_length: 128000, pricing: { prompt: 0.005, completion: 0.005 } },
+  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', context_length: 128000, pricing: { prompt: 0.0009, completion: 0.0009 } },
+  { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', context_length: 128000, pricing: { prompt: 0.0001, completion: 0.0001 } },
+  { id: 'meta-llama/llama-3-70b-instruct', name: 'Llama 3 70B', context_length: 8192, pricing: { prompt: 0.0009, completion: 0.0009 } },
+  { id: 'meta-llama/llama-3-8b-instruct', name: 'Llama 3 8B', context_length: 8192, pricing: { prompt: 0.0001, completion: 0.0001 } },
+  
+  // Mistral Models
+  { id: 'mistralai/mistral-large', name: 'Mistral Large', context_length: 128000, pricing: { prompt: 0.004, completion: 0.012 } },
+  { id: 'mistralai/mistral-medium', name: 'Mistral Medium', context_length: 32000, pricing: { prompt: 0.0027, completion: 0.0081 } },
+  { id: 'mistralai/mistral-small', name: 'Mistral Small', context_length: 32000, pricing: { prompt: 0.001, completion: 0.003 } },
+  { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', context_length: 32000, pricing: { prompt: 0.0006, completion: 0.0006 } },
+  { id: 'mistralai/mixtral-8x22b-instruct', name: 'Mixtral 8x22B', context_length: 64000, pricing: { prompt: 0.0012, completion: 0.0012 } },
+  
+  // Cohere Models
+  { id: 'cohere/command-r-plus', name: 'Command R+', context_length: 128000, pricing: { prompt: 0.003, completion: 0.015 } },
+  { id: 'cohere/command-r', name: 'Command R', context_length: 128000, pricing: { prompt: 0.0005, completion: 0.0015 } },
+  
+  // Perplexity Models (with online search)
+  { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Perplexity Sonar Large (Online)', context_length: 127072, pricing: { prompt: 0.001, completion: 0.001 } },
+  { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small (Online)', context_length: 127072, pricing: { prompt: 0.0002, completion: 0.0002 } },
+  { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge (Online)', context_length: 127072, pricing: { prompt: 0.005, completion: 0.005 } },
+];
+
+export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettingsCardProps) => {
+  const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(DEFAULT_MODELS);
+  const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>(DEFAULT_OPENROUTER_MODELS);
   const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
   const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
   const [openaiKeyStatus, setOpenaiKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
-
-  // Use the full model lists passed from parent
-  const availableModels = propAvailableModels || DEFAULT_MODELS;
-  const openrouterModels = propOpenrouterModels || [];
 
   const testOpenAIKey = async (apiKey: string) => {
     if (!apiKey?.trim()) {
