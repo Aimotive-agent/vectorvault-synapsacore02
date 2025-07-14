@@ -56,7 +56,7 @@ export interface ChatMessage {
 export interface ToolCall {
   id: string;
   name: string;
-  parameters: Record<string, any>;
+  arguments: Record<string, any>;
   result?: any;
   error?: string;
 }

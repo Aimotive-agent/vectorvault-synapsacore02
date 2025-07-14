@@ -45,14 +45,14 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
     }
   }, [tools.length, servers.length]);
 
-  const callOpenAI = async (messages: ChatMessage[]): Promise<string> => {
+  const callOpenAI = async (messages: ChatMessage[]): Promise<{ content: string; toolCalls?: ToolCall[] }> => {
     if (!settings.openaiApiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
     const systemMessage = {
       role: 'system',
-      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools. You can use these tools to help users accomplish various tasks. When you need to use a tool, explain what you're doing and why.`
+      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools. Available tools: ${tools.map(t => `${t.name} - ${t.description}`).join(', ')}. When a user asks for something that can be accomplished with these tools, use them to help complete the task. Be specific about what you're doing and explain the results.`
     };
 
     const formattedMessages = [
@@ -63,34 +63,41 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
       }))
     ];
 
+    const requestBody = {
+      model: settings.selectedModel || 'gpt-3.5-turbo',
+      messages: formattedMessages,
+      temperature: settings.temperature,
+      max_tokens: settings.maxTokens,
+    };
+
+    // Only add tools if we have them available
+    if (tools.length > 0) {
+      (requestBody as any).tools = tools.map(tool => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.inputSchema || {
+            type: 'object',
+            properties: {
+              instruction: {
+                type: 'string',
+                description: 'The instruction or parameters for this tool'
+              }
+            }
+          }
+        }
+      }));
+      (requestBody as any).tool_choice = 'auto';
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${settings.openaiApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: settings.selectedModel || 'gpt-3.5-turbo',
-        messages: formattedMessages,
-        temperature: settings.temperature,
-        max_tokens: settings.maxTokens,
-        tools: tools.map(tool => ({
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema || {
-              type: 'object',
-              properties: {
-                instruction: {
-                  type: 'string',
-                  description: 'The instruction or parameters for this tool'
-                }
-              }
-            }
-          }
-        }))
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -99,7 +106,81 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'No response generated';
+    const message = data.choices[0]?.message;
+    
+    if (!message) {
+      throw new Error('No response generated');
+    }
+
+    // Check if AI wants to call tools
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const toolCalls: ToolCall[] = [];
+      
+      for (const toolCall of message.tool_calls) {
+        try {
+          const result = await executeTool(
+            toolCall.function.name, 
+            JSON.parse(toolCall.function.arguments || '{}')
+          );
+          
+          toolCalls.push({
+            id: toolCall.id,
+            name: toolCall.function.name,
+            arguments: JSON.parse(toolCall.function.arguments || '{}'),
+            result: result
+          });
+        } catch (error) {
+          toolCalls.push({
+            id: toolCall.id,
+            name: toolCall.function.name,
+            arguments: JSON.parse(toolCall.function.arguments || '{}'),
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      // Get follow-up response from AI with tool results
+      const toolResultMessages = [
+        ...formattedMessages,
+        {
+          role: 'assistant',
+          content: message.content || '',
+          tool_calls: message.tool_calls
+        },
+        ...message.tool_calls.map((toolCall: any, index: number) => ({
+          role: 'tool',
+          content: JSON.stringify(toolCalls[index].result || toolCalls[index].error),
+          tool_call_id: toolCall.id
+        }))
+      ];
+
+      const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${settings.openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: settings.selectedModel || 'gpt-3.5-turbo',
+          messages: toolResultMessages,
+          temperature: settings.temperature,
+          max_tokens: settings.maxTokens,
+        }),
+      });
+
+      if (followUpResponse.ok) {
+        const followUpData = await followUpResponse.json();
+        return {
+          content: followUpData.choices[0]?.message?.content || 'Tool execution completed.',
+          toolCalls: toolCalls
+        };
+      }
+    }
+
+    return {
+      content: message.content || 'No response generated',
+      toolCalls: undefined
+    };
   };
 
   const executeTool = async (toolName: string, parameters: Record<string, any>): Promise<any> => {
@@ -164,12 +245,18 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiResponse,
+        content: aiResponse.content,
         timestamp: new Date(),
+        toolCalls: aiResponse.toolCalls,
       };
 
       setMessages(prev => [...prev, aiMessage]);
-      onLog('✅ AI response generated', 'success', '✅');
+      
+      if (aiResponse.toolCalls && aiResponse.toolCalls.length > 0) {
+        onLog(`✅ AI response generated with ${aiResponse.toolCalls.length} tool calls`, 'success', '✅');
+      } else {
+        onLog('✅ AI response generated', 'success', '✅');
+      }
 
     } catch (error) {
       const errorMessage: ChatMessage = {
