@@ -97,7 +97,7 @@ export const MCPWorkbench = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json, text/event-stream'
           },
           body: JSON.stringify({
             jsonrpc: '2.0',
@@ -110,7 +110,7 @@ export const MCPWorkbench = () => {
           const data = await response.json();
           return data.result || data;
         }
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       },
       
       // Method 3: Mock tools for demo (fallback)
