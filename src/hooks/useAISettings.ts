@@ -55,6 +55,9 @@ export const useAISettings = () => {
            maxTokens: data.max_tokens,
            systemPrompt: data.system_prompt || DEFAULT_SETTINGS.systemPrompt,
          });
+       } else {
+         // Only set defaults if no data exists
+         setSettings(DEFAULT_SETTINGS);
        }
     } catch (error) {
       console.error('Error loading AI settings:', error);

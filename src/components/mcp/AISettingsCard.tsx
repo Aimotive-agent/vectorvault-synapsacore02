@@ -16,6 +16,8 @@ interface AISettingsCardProps {
   settings: AISettings;
   onSettingsChange: (settings: AISettings) => void;
   onLog: (message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string) => void;
+  availableModels: OpenAIModel[];
+  openrouterModels: OpenRouterModel[];
 }
 
 const DEFAULT_MODELS: OpenAIModel[] = [
@@ -26,14 +28,27 @@ const DEFAULT_MODELS: OpenAIModel[] = [
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
 ];
 
-export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettingsCardProps) => {
-  const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(DEFAULT_MODELS);
-  const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>([]);
+export const AISettingsCard = ({ settings, onSettingsChange, onLog, availableModels: propAvailableModels, openrouterModels: propOpenrouterModels }: AISettingsCardProps) => {
+  const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(propAvailableModels || DEFAULT_MODELS);
+  const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>(propOpenrouterModels || []);
   const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
   const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
   const [openaiKeyStatus, setOpenaiKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
+
+  // Update models when props change
+  useEffect(() => {
+    if (propAvailableModels) {
+      setAvailableModels(propAvailableModels);
+    }
+  }, [propAvailableModels]);
+
+  useEffect(() => {
+    if (propOpenrouterModels) {
+      setOpenrouterModels(propOpenrouterModels);
+    }
+  }, [propOpenrouterModels]);
 
   const testOpenAIKey = async (apiKey: string) => {
     if (!apiKey?.trim()) {
@@ -67,13 +82,21 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
             pricing: getPricing(model.id)
           }));
 
-        setAvailableModels(models.length > 0 ? models : DEFAULT_MODELS);
+        const newModels = models.length > 0 ? models : DEFAULT_MODELS;
+        setAvailableModels(newModels);
         setOpenaiKeyStatus('valid');
         onLog('✅ OpenAI API key validated successfully', 'success', '✅');
         toast({
           title: "API Key Valid",
           description: `Found ${models.length} available models`,
         });
+        
+        // Update the settings with the new models - keep current model if it exists in new list
+        const currentModelExists = newModels.some(m => m.id === settings.selectedModel);
+        if (!currentModelExists && newModels.length > 0) {
+          onSettingsChange({ ...settings, selectedModel: newModels[0].id });
+        }
+        
         return true;
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -135,6 +158,13 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
           title: "API Key Valid",
           description: `Found ${models.length} available models`,
         });
+        
+        // Update the settings with the new models - keep current model if it exists in new list
+        const currentModelExists = models.some(m => m.id === settings.selectedModel);
+        if (!currentModelExists && models.length > 0) {
+          onSettingsChange({ ...settings, selectedModel: models[0].id });
+        }
+        
         return true;
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
