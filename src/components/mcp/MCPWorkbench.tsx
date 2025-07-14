@@ -180,25 +180,39 @@ export const MCPWorkbench = () => {
   };
 
   const parseToolsResponse = (data: any): MCPTool[] => {
+    addLog(`🔍 Raw server response: ${JSON.stringify(data, null, 2)}`, 'info', '🔍', 'Tool Discovery');
+    
     let discoveredTools: MCPTool[] = [];
     
+    // Check multiple possible response formats
     if (data.tools && Array.isArray(data.tools)) {
       discoveredTools = data.tools;
+      addLog(`✅ Found tools in data.tools format`, 'success', '✅', 'Tool Discovery');
     } else if (Array.isArray(data)) {
       discoveredTools = data;
+      addLog(`✅ Found tools in array format`, 'success', '✅', 'Tool Discovery');
     } else if (data.result && Array.isArray(data.result.tools)) {
       discoveredTools = data.result.tools;
+      addLog(`✅ Found tools in data.result.tools format`, 'success', '✅', 'Tool Discovery');
+    } else if (data.result && data.result.tools) {
+      // Handle case where tools might be an object instead of array
+      discoveredTools = Object.values(data.result.tools);
+      addLog(`✅ Found tools in data.result.tools object format`, 'success', '✅', 'Tool Discovery');
     } else {
       // Try to extract tools from various possible formats
+      addLog(`🔄 Searching through response for tool arrays...`, 'info', '🔄', 'Tool Discovery');
       for (const [key, value] of Object.entries(data)) {
-        if (Array.isArray(value) && value.length > 0 && value[0].name) {
+        if (Array.isArray(value) && value.length > 0 && value[0]?.name) {
           discoveredTools = [...discoveredTools, ...value];
+          addLog(`✅ Found tools in data.${key} format`, 'success', '✅', 'Tool Discovery');
         }
       }
     }
     
+    addLog(`📊 Raw discovered tools count: ${discoveredTools.length}`, 'info', '📊', 'Tool Discovery');
+    
     // Ensure tools have required properties
-    return discoveredTools.map(tool => ({
+    const processedTools = discoveredTools.map(tool => ({
       name: tool.name || 'unnamed_tool',
       description: tool.description || 'No description available',
       category: tool.category || 'utility',
@@ -206,6 +220,10 @@ export const MCPWorkbench = () => {
       inputSchema: tool.inputSchema,
       outputSchema: tool.outputSchema
     }));
+    
+    addLog(`🎯 Final processed tools: ${processedTools.map(t => t.name).join(', ')}`, 'success', '🎯', 'Tool Discovery');
+    
+    return processedTools;
   };
 
   const handleAddServer = async (name: string, url: string, description?: string) => {
