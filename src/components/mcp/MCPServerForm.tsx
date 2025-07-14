@@ -14,72 +14,7 @@ interface MCPServerFormProps {
   isLoading: boolean;
 }
 
-const PRESET_SERVERS: PresetMCPServer[] = [
-  {
-    name: "Pipedream Workflow (Example)",
-    url: "https://your-unique-id.m.pipedream.net",
-    description: "Replace with YOUR actual Pipedream workflow URL. Find it in your Pipedream dashboard → Your Workflow → Copy URL",
-    category: "Automation",
-    features: ["Workflow automation", "API integrations", "Data processing", "Event handling"],
-    documentation: "https://pipedream.com/docs"
-  },
-  {
-    name: "GitHub API Tools",
-    url: "https://api.github.com/tools",
-    description: "Repository management, issue tracking, and code analysis tools",
-    category: "Development",
-    features: ["Repository operations", "Issue management", "Pull requests", "Code analysis"],
-    documentation: "https://docs.github.com/en/rest"
-  },
-  {
-    name: "Slack Integration",
-    url: "https://slack.com/api/tools",
-    description: "Send messages, manage channels, and interact with Slack workspaces",
-    category: "Communication",
-    features: ["Message sending", "Channel management", "User operations", "File sharing"],
-    documentation: "https://api.slack.com/"
-  },
-  {
-    name: "Google Workspace",
-    url: "https://developers.google.com/workspace/tools",
-    description: "Google Sheets, Docs, Drive, and Calendar integration tools",
-    category: "Productivity",
-    features: ["Document editing", "Spreadsheet operations", "Calendar management", "Drive operations"],
-    documentation: "https://developers.google.com/workspace"
-  },
-  {
-    name: "AWS Tools",
-    url: "https://aws.amazon.com/api/tools",
-    description: "AWS service management and cloud operations tools",
-    category: "Cloud",
-    features: ["EC2 management", "S3 operations", "Lambda functions", "Database operations"],
-    documentation: "https://docs.aws.amazon.com/"
-  },
-  {
-    name: "HubSpot CRM",
-    url: "https://api.hubspot.com/tools",
-    description: "Customer relationship management and marketing automation tools",
-    category: "CRM",
-    features: ["Contact management", "Deal tracking", "Email campaigns", "Analytics"],
-    documentation: "https://developers.hubspot.com/"
-  },
-  {
-    name: "Notion API",
-    url: "https://api.notion.com/tools",
-    description: "Notion database and page management tools",
-    category: "Productivity",
-    features: ["Database operations", "Page creation", "Content management", "Team collaboration"],
-    documentation: "https://developers.notion.com/"
-  },
-  {
-    name: "Zendesk Support",
-    url: "https://developer.zendesk.com/api/tools",
-    description: "Customer support and ticket management tools",
-    category: "Support",
-    features: ["Ticket management", "Customer interactions", "Knowledge base", "Reporting"],
-    documentation: "https://developer.zendesk.com/"
-  }
-];
+const PRESET_SERVERS: PresetMCPServer[] = [];
 
 export const MCPServerForm = ({ onAddServer, isLoading }: MCPServerFormProps) => {
   const [name, setName] = useState('');
@@ -127,71 +62,73 @@ export const MCPServerForm = ({ onAddServer, isLoading }: MCPServerFormProps) =>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Preset Servers */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Popular MCP Servers</h3>
-            <Badge variant="outline" className="text-xs">
-              {PRESET_SERVERS.length} available
-            </Badge>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {PRESET_SERVERS.map((preset) => (
-              <div
-                key={preset.name}
-                className="p-4 border rounded-lg hover:shadow-soft transition-all duration-200 bg-card"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-primary" />
-                    <h4 className="font-medium text-sm">{preset.name}</h4>
-                  </div>
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs ${getCategoryColor(preset.category)}`}
-                  >
-                    {preset.category}
-                  </Badge>
-                </div>
-                
-                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                  {preset.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {preset.features.slice(0, 3).map((feature) => (
-                    <Badge key={feature} variant="secondary" className="text-xs">
-                      {feature}
-                    </Badge>
-                  ))}
-                  {preset.features.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{preset.features.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-                
-                <Button
-                  size="sm"
-                  variant="mcp"
-                  onClick={() => handlePresetSelect(preset)}
-                  disabled={isLoading}
-                  className="w-full"
+        {/* Only show preset section if there are presets */}
+        {PRESET_SERVERS.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Popular MCP Servers</h3>
+              <Badge variant="outline" className="text-xs">
+                {PRESET_SERVERS.length} available
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {PRESET_SERVERS.map((preset) => (
+                <div
+                  key={preset.name}
+                  className="p-4 border rounded-lg hover:shadow-soft transition-all duration-200 bg-card"
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="h-3 w-3" />
-                      Quick Connect
-                    </>
-                  )}
-                </Button>
-              </div>
-            ))}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-primary" />
+                      <h4 className="font-medium text-sm">{preset.name}</h4>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${getCategoryColor(preset.category)}`}
+                    >
+                      {preset.category}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                    {preset.description}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {preset.features.slice(0, 3).map((feature) => (
+                      <Badge key={feature} variant="secondary" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
+                    {preset.features.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{preset.features.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <Button
+                    size="sm"
+                    variant="mcp"
+                    onClick={() => handlePresetSelect(preset)}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Zap className="h-3 w-3" />
+                        Quick Connect
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <Separator />
 

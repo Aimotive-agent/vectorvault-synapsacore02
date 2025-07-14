@@ -97,9 +97,44 @@ export const MCPWorkbench = () => {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
         
-        const data = await response.json();
-        addLog(`📥 MCP Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
-        return data;
+        const contentType = response.headers.get('content-type');
+        addLog(`📥 Response content-type: ${contentType}`, 'info', '📥', 'Tool Discovery');
+        
+        if (contentType?.includes('text/event-stream')) {
+          // Handle SSE response
+          const text = await response.text();
+          addLog(`📥 SSE Response: ${text.substring(0, 200)}...`, 'info', '📥', 'Tool Discovery');
+          
+          // Parse SSE format - look for data: lines
+          const lines = text.split('\n');
+          let jsonData = null;
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const dataStr = line.substring(6).trim();
+                if (dataStr && dataStr !== '[DONE]') {
+                  jsonData = JSON.parse(dataStr);
+                  break;
+                }
+              } catch (e) {
+                continue;
+              }
+            }
+          }
+          
+          if (jsonData) {
+            addLog(`✅ Parsed SSE data successfully`, 'success', '✅', 'Tool Discovery');
+            return jsonData;
+          } else {
+            throw new Error('No valid JSON data found in SSE response');
+          }
+        } else {
+          // Handle regular JSON response
+          const data = await response.json();
+          addLog(`📥 JSON Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
+          return data;
+        }
       },
       
       // Method 2: Direct GET request with proper headers
@@ -115,9 +150,28 @@ export const MCPWorkbench = () => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
-        const data = await response.json();
-        addLog(`📥 GET Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
-        return data;
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('text/event-stream')) {
+          const text = await response.text();
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const dataStr = line.substring(6).trim();
+                if (dataStr && dataStr !== '[DONE]') {
+                  return JSON.parse(dataStr);
+                }
+              } catch (e) {
+                continue;
+              }
+            }
+          }
+          throw new Error('No valid JSON data found in SSE response');
+        } else {
+          const data = await response.json();
+          addLog(`📥 GET Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
+          return data;
+        }
       }
     ];
 
