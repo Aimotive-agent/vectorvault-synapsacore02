@@ -118,10 +118,22 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
       
       for (const toolCall of message.tool_calls) {
         try {
-          const result = await executeTool(
-            toolCall.function.name, 
-            JSON.parse(toolCall.function.arguments || '{}')
-          );
+          let parameters = JSON.parse(toolCall.function.arguments || '{}');
+          
+          // Fix parameter mapping for Gmail send_email action
+          if (toolCall.function.name === 'send_email') {
+            // Map 'message' to 'body' for Pipedream Gmail action
+            if (parameters.message && !parameters.body) {
+              parameters.body = parameters.message;
+              delete parameters.message;
+            }
+            // Set default body type to HTML if not specified
+            if (!parameters.bodyType) {
+              parameters.bodyType = 'html';
+            }
+          }
+          
+          const result = await executeTool(toolCall.function.name, parameters);
           
           toolCalls.push({
             id: toolCall.id,
