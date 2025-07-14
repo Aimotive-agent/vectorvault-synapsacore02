@@ -85,9 +85,11 @@ export const MCPWorkbench = () => {
   ];
 
   // Handle settings change with database persistence
-  const handleSettingsChange = (newSettings: AISettings) => {
+  const handleSettingsChange = async (newSettings: AISettings) => {
+    // Update local state immediately for UI responsiveness
     setAiSettings(newSettings);
-    saveSettings(newSettings);
+    // Save to database (will also update state on success)
+    await saveSettings(newSettings);
   };
 
   // Initialize with welcome log

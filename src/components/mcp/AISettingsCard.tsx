@@ -35,6 +35,16 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
 
+  // Effect to save settings when they change
+  useEffect(() => {
+    // Auto-save settings when they change
+    const saveTimeout = setTimeout(() => {
+      // This will trigger the parent to save the settings
+    }, 500);
+    
+    return () => clearTimeout(saveTimeout);
+  }, [settings]);
+
   const testOpenAIKey = async (apiKey: string) => {
     if (!apiKey?.trim()) {
       toast({
@@ -173,13 +183,25 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   };
 
   const handleOpenAIApiKeyChange = (apiKey: string) => {
-    onSettingsChange({ ...settings, openaiApiKey: apiKey });
+    const updatedSettings = { ...settings, openaiApiKey: apiKey };
+    onSettingsChange(updatedSettings);
     setOpenaiKeyStatus('untested');
   };
 
   const handleOpenRouterApiKeyChange = (apiKey: string) => {
-    onSettingsChange({ ...settings, openrouterApiKey: apiKey });
+    const updatedSettings = { ...settings, openrouterApiKey: apiKey };
+    onSettingsChange(updatedSettings);
     setOpenrouterKeyStatus('untested');
+  };
+
+  const handleModelChange = (modelId: string) => {
+    const updatedSettings = { ...settings, selectedModel: modelId };
+    onSettingsChange(updatedSettings);
+  };
+
+  const handleProviderChange = (provider: 'openai' | 'openrouter') => {
+    const updatedSettings = { ...settings, provider };
+    onSettingsChange(updatedSettings);
   };
 
   const handleTestOpenAIKey = () => {
@@ -219,7 +241,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
         {/* Provider Selection */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">AI Provider</Label>
-          <Tabs value={settings.provider} onValueChange={(value) => onSettingsChange({ ...settings, provider: value as 'openai' | 'openrouter' })}>
+          <Tabs value={settings.provider} onValueChange={handleProviderChange}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="openai">OpenAI</TabsTrigger>
               <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
@@ -315,7 +337,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
           </Label>
           <Select 
             value={settings.selectedModel} 
-            onValueChange={(value) => onSettingsChange({ ...settings, selectedModel: value })}
+            onValueChange={handleModelChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a model" />

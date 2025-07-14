@@ -97,7 +97,13 @@ export const useAISettings = () => {
 
       if (error) throw error;
 
+      // Update local state immediately after successful save
       setSettings(newSettings);
+      
+      toast({
+        title: "Settings Saved",
+        description: "AI settings saved successfully",
+      });
     } catch (error) {
       console.error('Error saving AI settings:', error);
       toast({
