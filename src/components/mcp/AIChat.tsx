@@ -5,19 +5,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle, Copy, Check } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle, Copy, Check, Brain, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ChatMessage, MCPTool, MCPServer, AISettings, ToolCall } from '@/types/mcp';
+import { ChatMessage, MCPTool, MCPServer, AISettings, ToolCall, OpenAIModel, OpenRouterModel } from '@/types/mcp';
 import { formatDistanceToNow } from 'date-fns';
 
 interface AIChatProps {
   servers: MCPServer[];
   tools: MCPTool[];
   settings: AISettings;
+  onSettingsChange: (settings: AISettings) => void;
+  availableModels: OpenAIModel[];
+  openrouterModels: OpenRouterModel[];
   onLog: (message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string) => void;
 }
 
-export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
+export const AIChat = ({ servers, tools, settings, onSettingsChange, availableModels, openrouterModels, onLog }: AIChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,6 +34,14 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
   const currentApiKey = settings.provider === 'openrouter' 
     ? settings.openrouterApiKey 
     : settings.openaiApiKey;
+  
+  // Get current models based on provider
+  const getCurrentModels = () => {
+    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
+  };
+  
+  const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);
+  const modelDisplayName = selectedModel?.name || settings.selectedModel;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -428,8 +441,38 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
             </Badge>
           </div>
         </CardTitle>
-        <CardDescription>
-          Chat with your AI agent that has access to all connected MCP tools and services
+        <CardDescription className="flex items-center justify-between">
+          <span>Chat with your AI agent that has access to all connected MCP tools and services</span>
+          <div className="flex items-center gap-3 text-xs">
+            <Badge variant="secondary" className="capitalize">
+              {settings.provider}
+            </Badge>
+            <div className="flex items-center gap-2">
+              <Brain className="h-3 w-3" />
+              <Select
+                value={settings.selectedModel}
+                onValueChange={(value) => onSettingsChange({ ...settings, selectedModel: value })}
+              >
+                <SelectTrigger className="h-7 text-xs min-w-[180px] border-muted">
+                  <SelectValue>
+                    <span className="truncate">{modelDisplayName}</span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {getCurrentModels().map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div className="flex flex-col">
+                        <span className="text-sm">{model.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Context: {((model as any).context_window || (model as any).context_length)?.toLocaleString()} tokens
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -34,6 +34,20 @@ export const MCPWorkbench = () => {
     systemPrompt: 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
   });
 
+  // Available models (these would normally come from API calls in AISettingsCard)
+  const availableModels = [
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000 },
+    { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000 },
+    { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000 },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16000 }
+  ];
+
+  const openrouterModels = [
+    { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', context_length: 200000 },
+    { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', context_length: 200000 },
+    { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000 }
+  ];
+
   // Load settings from localStorage
   useEffect(() => {
     const savedSettings = localStorage.getItem('mcp-ai-settings');
@@ -526,6 +540,9 @@ export const MCPWorkbench = () => {
               servers={servers}
               tools={tools}
               settings={aiSettings}
+              onSettingsChange={setAiSettings}
+              availableModels={availableModels}
+              openrouterModels={openrouterModels}
               onLog={addLog}
             />
           </TabsContent>
