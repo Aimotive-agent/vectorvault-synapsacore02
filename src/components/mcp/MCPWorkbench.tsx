@@ -74,30 +74,16 @@ export const MCPWorkbench = () => {
   const discoverTools = async (serverUrl: string): Promise<MCPTool[]> => {
     addLog(`🔍 Discovering tools for: ${serverUrl}`, 'info', '🔍', 'Tool Discovery');
     
-    // Enhanced tool discovery with better error handling
+    // Enhanced tool discovery with better error handling for Pipedream MCP
     const discoveryMethods = [
-      // Method 1: Direct connection
+      // Method 1: MCP protocol for Pipedream
       async () => {
-        const response = await fetch(serverUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        if (response.ok) {
-          return await response.json();
-        }
-        throw new Error(`HTTP ${response.status}`);
-      },
-      
-      // Method 2: MCP protocol
-      async () => {
+        addLog(`🌐 Trying MCP protocol for Pipedream...`, 'info', '🌐', 'Tool Discovery');
         const response = await fetch(serverUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json, text/event-stream'
+            'Accept': 'application/json'
           },
           body: JSON.stringify({
             jsonrpc: '2.0',
@@ -106,77 +92,97 @@ export const MCPWorkbench = () => {
             params: {}
           })
         });
-        if (response.ok) {
-          const data = await response.json();
-          return data.result || data;
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        
+        const data = await response.json();
+        addLog(`📥 MCP Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
+        return data;
       },
       
-      // Method 3: Mock tools for demo (fallback)
+      // Method 2: Direct GET request  
       async () => {
-        addLog('📝 Using demo tools for development/testing', 'warning', '📝', 'Tool Discovery');
-        return {
-          tools: [
-            {
-              name: 'send_email',
-              description: 'Send an email message',
-              category: 'communication',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  to: { type: 'string', description: 'Recipient email' },
-                  subject: { type: 'string', description: 'Email subject' },
-                  message: { type: 'string', description: 'Email content' }
-                }
-              }
-            },
-            {
-              name: 'create_document',
-              description: 'Create a new document',
-              category: 'productivity',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  title: { type: 'string', description: 'Document title' },
-                  content: { type: 'string', description: 'Document content' }
-                }
-              }
-            },
-            {
-              name: 'search_web',
-              description: 'Search the web for information',
-              category: 'utility',
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  query: { type: 'string', description: 'Search query' }
-                }
-              }
-            }
-          ]
-        };
+        addLog(`🌐 Trying direct GET request...`, 'info', '🌐', 'Tool Discovery');
+        const response = await fetch(serverUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+        const data = await response.json();
+        addLog(`📥 GET Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
+        return data;
+      },
+      
+      // Method 3: Try Pipedream webhook format
+      async () => {
+        addLog(`🌐 Trying Pipedream webhook format...`, 'info', '🌐', 'Tool Discovery');
+        const response = await fetch(serverUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'list_tools'
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+        const data = await response.json();
+        addLog(`📥 Webhook Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
+        return data;
+      },
+      
+      // Method 4: Try OPTIONS request to see what methods are supported
+      async () => {
+        addLog(`🌐 Checking server capabilities with OPTIONS...`, 'info', '🌐', 'Tool Discovery');
+        const response = await fetch(serverUrl, {
+          method: 'OPTIONS',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+        // This won't return tools, but will help us understand the server
+        const headers = Object.fromEntries(response.headers.entries());
+        addLog(`📥 Server capabilities: ${JSON.stringify(headers)}`, 'info', '📥', 'Tool Discovery');
+        throw new Error('OPTIONS request successful but no tools returned');
       }
     ];
 
     // Try each method in sequence
     for (let i = 0; i < discoveryMethods.length; i++) {
       try {
-        addLog(`🌐 Trying discovery method ${i + 1}...`, 'info', '🌐', 'Tool Discovery');
+        addLog(`🔄 Trying discovery method ${i + 1}/${discoveryMethods.length}...`, 'info', '🔄', 'Tool Discovery');
         const data = await discoveryMethods[i]();
         const discoveredTools = parseToolsResponse(data);
-        addLog(`🔧 Found ${discoveredTools.length} tools using method ${i + 1}`, 'success', '🔧', 'Tool Discovery');
-        return discoveredTools;
-      } catch (error) {
-        addLog(`⚠️ Method ${i + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'warning', '⚠️', 'Tool Discovery');
-        if (i === discoveryMethods.length - 1) {
-          // If all methods fail, throw the last error
-          throw error;
+        
+        if (discoveredTools.length > 0) {
+          addLog(`✅ Successfully found ${discoveredTools.length} tools using method ${i + 1}`, 'success', '✅', 'Tool Discovery');
+          return discoveredTools;
+        } else {
+          addLog(`⚠️ Method ${i + 1} returned no tools`, 'warning', '⚠️', 'Tool Discovery');
         }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        addLog(`❌ Method ${i + 1} failed: ${errorMsg}`, 'error', '❌', 'Tool Discovery');
       }
     }
     
-    return [];
+    // If all methods fail, show error instead of falling back to demo tools
+    addLog(`🚫 All discovery methods failed for ${serverUrl}`, 'error', '🚫', 'Tool Discovery');
+    addLog(`💡 Please check that your Pipedream MCP server URL is correct and accessible`, 'warning', '💡', 'Tool Discovery');
+    throw new Error('Could not discover tools from the provided server URL');
   };
 
   const parseToolsResponse = (data: any): MCPTool[] => {
