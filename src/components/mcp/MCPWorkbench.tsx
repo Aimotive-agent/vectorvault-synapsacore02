@@ -74,16 +74,16 @@ export const MCPWorkbench = () => {
   const discoverTools = async (serverUrl: string): Promise<MCPTool[]> => {
     addLog(`🔍 Discovering tools for: ${serverUrl}`, 'info', '🔍', 'Tool Discovery');
     
-    // Enhanced tool discovery with better error handling for Pipedream MCP
+    // Enhanced tool discovery with proper headers for Pipedream MCP
     const discoveryMethods = [
-      // Method 1: MCP protocol for Pipedream
+      // Method 1: MCP protocol with proper Accept headers for Pipedream
       async () => {
-        addLog(`🌐 Trying MCP protocol for Pipedream...`, 'info', '🌐', 'Tool Discovery');
+        addLog(`🌐 Trying MCP protocol with proper headers...`, 'info', '🌐', 'Tool Discovery');
         const response = await fetch(serverUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json, text/event-stream'
           },
           body: JSON.stringify({
             jsonrpc: '2.0',
@@ -102,13 +102,13 @@ export const MCPWorkbench = () => {
         return data;
       },
       
-      // Method 2: Direct GET request  
+      // Method 2: Direct GET request with proper headers
       async () => {
         addLog(`🌐 Trying direct GET request...`, 'info', '🌐', 'Tool Discovery');
         const response = await fetch(serverUrl, {
           method: 'GET',
           headers: {
-            'Accept': 'application/json',
+            'Accept': 'application/json, text/event-stream',
             'Content-Type': 'application/json'
           }
         });
@@ -118,45 +118,6 @@ export const MCPWorkbench = () => {
         const data = await response.json();
         addLog(`📥 GET Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
         return data;
-      },
-      
-      // Method 3: Try Pipedream webhook format
-      async () => {
-        addLog(`🌐 Trying Pipedream webhook format...`, 'info', '🌐', 'Tool Discovery');
-        const response = await fetch(serverUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            action: 'list_tools'
-          })
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-        const data = await response.json();
-        addLog(`📥 Webhook Response: ${JSON.stringify(data)}`, 'info', '📥', 'Tool Discovery');
-        return data;
-      },
-      
-      // Method 4: Try OPTIONS request to see what methods are supported
-      async () => {
-        addLog(`🌐 Checking server capabilities with OPTIONS...`, 'info', '🌐', 'Tool Discovery');
-        const response = await fetch(serverUrl, {
-          method: 'OPTIONS',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-        // This won't return tools, but will help us understand the server
-        const headers = Object.fromEntries(response.headers.entries());
-        addLog(`📥 Server capabilities: ${JSON.stringify(headers)}`, 'info', '📥', 'Tool Discovery');
-        throw new Error('OPTIONS request successful but no tools returned');
       }
     ];
 
@@ -179,10 +140,10 @@ export const MCPWorkbench = () => {
       }
     }
     
-    // If all methods fail, show error instead of falling back to demo tools
+    // If all methods fail, throw error instead of falling back to demo tools
     addLog(`🚫 All discovery methods failed for ${serverUrl}`, 'error', '🚫', 'Tool Discovery');
-    addLog(`💡 Please check that your Pipedream MCP server URL is correct and accessible`, 'warning', '💡', 'Tool Discovery');
-    throw new Error('Could not discover tools from the provided server URL');
+    addLog(`💡 Please verify your Pipedream MCP server URL is correct and accessible`, 'warning', '💡', 'Tool Discovery');
+    throw new Error('Could not discover tools from the provided server URL. Please check the server URL and try again.');
   };
 
   const parseToolsResponse = (data: any): MCPTool[] => {
