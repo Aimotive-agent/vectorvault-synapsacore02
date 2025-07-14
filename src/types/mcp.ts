@@ -1,0 +1,79 @@
+export interface MCPServer {
+  id: string;
+  name: string;
+  url: string;
+  status: 'connected' | 'disconnected' | 'error' | 'connecting';
+  tools: MCPTool[];
+  lastConnected?: Date;
+  description?: string;
+}
+
+export interface MCPTool {
+  name: string;
+  description: string;
+  parameters?: Record<string, any>;
+  serverUrl?: string;
+  serverId?: string;
+  category?: string;
+  inputSchema?: any;
+  outputSchema?: any;
+}
+
+export interface LogEntry {
+  id: string;
+  timestamp: Date;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  icon: string;
+  source?: string;
+}
+
+export interface ToolTestResult {
+  success: boolean;
+  result?: any;
+  error?: string;
+  duration?: number;
+}
+
+export interface OpenAIModel {
+  id: string;
+  name: string;
+  context_window: number;
+  pricing?: {
+    input: number;
+    output: number;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  toolCalls?: ToolCall[];
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  parameters: Record<string, any>;
+  result?: any;
+  error?: string;
+}
+
+export interface AISettings {
+  openaiApiKey: string;
+  selectedModel: string;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt: string;
+}
+
+export interface PresetMCPServer {
+  name: string;
+  url: string;
+  description: string;
+  category: string;
+  features: string[];
+  documentation?: string;
+}

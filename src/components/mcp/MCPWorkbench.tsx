@@ -1,0 +1,470 @@
+import { useState, useCallback, useEffect } from 'react';
+import { MCPServer, MCPTool, LogEntry, AISettings } from '@/types/mcp';
+import { MCPServerForm } from './MCPServerForm';
+import { ConnectedServers } from './ConnectedServers';
+import { AvailableTools } from './AvailableTools';
+import { AISettingsCard } from './AISettingsCard';
+import { AIChat } from './AIChat';
+import { ActivityLog } from './ActivityLog';
+import { Bot, Settings, Server, Wrench, MessageSquare, Activity } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+
+export const MCPWorkbench = () => {
+  const [servers, setServers] = useState<MCPServer[]>([]);
+  const [tools, setTools] = useState<MCPTool[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isAddingServer, setIsAddingServer] = useState(false);
+  const [refreshingServer, setRefreshingServer] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState('servers');
+  const { toast } = useToast();
+
+  // AI Settings state
+  const [aiSettings, setAiSettings] = useState<AISettings>({
+    openaiApiKey: '',
+    selectedModel: 'gpt-3.5-turbo',
+    temperature: 0.7,
+    maxTokens: 1000,
+    systemPrompt: 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
+  });
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('mcp-ai-settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setAiSettings(parsed);
+      } catch (error) {
+        console.error('Failed to load saved settings:', error);
+      }
+    }
+  }, []);
+
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('mcp-ai-settings', JSON.stringify(aiSettings));
+  }, [aiSettings]);
+
+  // Initialize with welcome log
+  useEffect(() => {
+    const welcomeLog: LogEntry = {
+      id: '1',
+      timestamp: new Date(),
+      message: 'MCP Integration Workbench initialized - Ready to connect to MCP servers',
+      type: 'info',
+      icon: '🚀'
+    };
+    setLogs([welcomeLog]);
+  }, []);
+
+  const addLog = useCallback((message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string, source?: string) => {
+    const newLog: LogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      message,
+      type,
+      icon,
+      source
+    };
+    setLogs(prev => [...prev, newLog]);
+  }, []);
+
+  const discoverTools = async (serverUrl: string): Promise<MCPTool[]> => {
+    addLog(`🔍 Discovering tools for: ${serverUrl}`, 'info', '🔍', 'Tool Discovery');
+    
+    // Enhanced tool discovery with better error handling
+    const discoveryMethods = [
+      // Method 1: Direct connection
+      async () => {
+        const response = await fetch(serverUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+        throw new Error(`HTTP ${response.status}`);
+      },
+      
+      // Method 2: MCP protocol
+      async () => {
+        const response = await fetch(serverUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'tools/list',
+            params: {}
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.result || data;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      },
+      
+      // Method 3: Mock tools for demo (fallback)
+      async () => {
+        addLog('📝 Using demo tools for development/testing', 'warning', '📝', 'Tool Discovery');
+        return {
+          tools: [
+            {
+              name: 'send_email',
+              description: 'Send an email message',
+              category: 'communication',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  to: { type: 'string', description: 'Recipient email' },
+                  subject: { type: 'string', description: 'Email subject' },
+                  message: { type: 'string', description: 'Email content' }
+                }
+              }
+            },
+            {
+              name: 'create_document',
+              description: 'Create a new document',
+              category: 'productivity',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', description: 'Document title' },
+                  content: { type: 'string', description: 'Document content' }
+                }
+              }
+            },
+            {
+              name: 'search_web',
+              description: 'Search the web for information',
+              category: 'utility',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  query: { type: 'string', description: 'Search query' }
+                }
+              }
+            }
+          ]
+        };
+      }
+    ];
+
+    // Try each method in sequence
+    for (let i = 0; i < discoveryMethods.length; i++) {
+      try {
+        addLog(`🌐 Trying discovery method ${i + 1}...`, 'info', '🌐', 'Tool Discovery');
+        const data = await discoveryMethods[i]();
+        const discoveredTools = parseToolsResponse(data);
+        addLog(`🔧 Found ${discoveredTools.length} tools using method ${i + 1}`, 'success', '🔧', 'Tool Discovery');
+        return discoveredTools;
+      } catch (error) {
+        addLog(`⚠️ Method ${i + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'warning', '⚠️', 'Tool Discovery');
+        if (i === discoveryMethods.length - 1) {
+          // If all methods fail, throw the last error
+          throw error;
+        }
+      }
+    }
+    
+    return [];
+  };
+
+  const parseToolsResponse = (data: any): MCPTool[] => {
+    let discoveredTools: MCPTool[] = [];
+    
+    if (data.tools && Array.isArray(data.tools)) {
+      discoveredTools = data.tools;
+    } else if (Array.isArray(data)) {
+      discoveredTools = data;
+    } else if (data.result && Array.isArray(data.result.tools)) {
+      discoveredTools = data.result.tools;
+    } else {
+      // Try to extract tools from various possible formats
+      for (const [key, value] of Object.entries(data)) {
+        if (Array.isArray(value) && value.length > 0 && value[0].name) {
+          discoveredTools = [...discoveredTools, ...value];
+        }
+      }
+    }
+    
+    // Ensure tools have required properties
+    return discoveredTools.map(tool => ({
+      name: tool.name || 'unnamed_tool',
+      description: tool.description || 'No description available',
+      category: tool.category || 'utility',
+      parameters: tool.parameters || tool.inputSchema,
+      inputSchema: tool.inputSchema,
+      outputSchema: tool.outputSchema
+    }));
+  };
+
+  const handleAddServer = async (name: string, url: string, description?: string) => {
+    setIsAddingServer(true);
+    addLog(`📝 Adding MCP server: ${name} (${url})`, 'info', '📝', 'Server Management');
+    
+    try {
+      const discoveredTools = await discoverTools(url);
+      
+      const newServer: MCPServer = {
+        id: Date.now().toString(),
+        name,
+        url,
+        status: 'connected',
+        tools: discoveredTools,
+        lastConnected: new Date(),
+        description
+      };
+      
+      setServers(prev => [...prev, newServer]);
+      setTools(prev => [...prev, ...discoveredTools.map(tool => ({ 
+        ...tool, 
+        serverUrl: url, 
+        serverId: newServer.id 
+      }))]);
+      
+      addLog(`✅ Server added successfully: ${name} with ${discoveredTools.length} tools`, 'success', '✅', 'Server Management');
+      toast({
+        title: "Server Connected",
+        description: `Successfully connected to ${name} with ${discoveredTools.length} tools`,
+      });
+      
+      // Auto-switch to tools tab if this is the first server with tools
+      if (tools.length === 0 && discoveredTools.length > 0) {
+        setActiveTab('tools');
+      }
+      
+    } catch (error) {
+      addLog(`❌ Failed to add server: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌', 'Server Management');
+      toast({
+        title: "Connection Failed", 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingServer(false);
+    }
+  };
+
+  const handleRefreshServer = async (serverId: string) => {
+    const server = servers.find(s => s.id === serverId);
+    if (!server) return;
+    
+    setRefreshingServer(serverId);
+    addLog(`🔄 Refreshing server: ${server.name}`, 'info', '🔄', 'Server Management');
+    
+    try {
+      const discoveredTools = await discoverTools(server.url);
+      
+      setServers(prev => prev.map(s => 
+        s.id === serverId 
+          ? { ...s, tools: discoveredTools, lastConnected: new Date(), status: 'connected' as const }
+          : s
+      ));
+      
+      // Update tools list
+      setTools(prev => {
+        const otherTools = prev.filter(tool => tool.serverId !== serverId);
+        const newTools = discoveredTools.map(tool => ({ 
+          ...tool, 
+          serverUrl: server.url, 
+          serverId: server.id 
+        }));
+        return [...otherTools, ...newTools];
+      });
+      
+      addLog(`✅ Server refreshed: ${server.name} (${discoveredTools.length} tools)`, 'success', '✅', 'Server Management');
+      toast({
+        title: "Server Refreshed",
+        description: `Refreshed ${server.name} with ${discoveredTools.length} tools`,
+      });
+      
+    } catch (error) {
+      setServers(prev => prev.map(s => 
+        s.id === serverId ? { ...s, status: 'error' as const } : s
+      ));
+      addLog(`❌ Server refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌', 'Server Management');
+      toast({
+        title: "Refresh Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshingServer(undefined);
+    }
+  };
+
+  const handleRemoveServer = (serverId: string) => {
+    const server = servers.find(s => s.id === serverId);
+    if (!server) return;
+    
+    setServers(prev => prev.filter(s => s.id !== serverId));
+    setTools(prev => prev.filter(tool => tool.serverId !== serverId));
+    
+    addLog(`🗑️ Server removed: ${server.name}`, 'info', '🗑️', 'Server Management');
+    toast({
+      title: "Server Removed",
+      description: `Removed ${server.name} from connected servers`,
+    });
+  };
+
+  const handleClearLog = () => {
+    setLogs([]);
+    addLog('🧹 Activity log cleared', 'info', '🧹', 'System');
+  };
+
+  const handleExportLog = () => {
+    const logText = logs.map(log => 
+      `[${log.timestamp.toLocaleString()}] ${log.type.toUpperCase()}: ${log.message}`
+    ).join('\n');
+    
+    const blob = new Blob([logText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mcp-log-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    addLog('📥 Activity log exported', 'info', '📥', 'System');
+  };
+
+  const getTabBadges = () => {
+    return {
+      servers: servers.length,
+      tools: tools.length,
+      chat: aiSettings.openaiApiKey ? 'Ready' : 'Setup',
+      logs: logs.length
+    };
+  };
+
+  const badges = getTabBadges();
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+            <Bot className="inline-block mr-3 h-10 w-10 text-primary" />
+            MCP Integration Workbench
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Connect to MCP servers, manage tools, and interact with AI agents
+          </p>
+        </div>
+
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:h-12">
+            <TabsTrigger value="servers" className="flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Servers
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {badges.servers}
+              </Badge>
+            </TabsTrigger>
+            
+            <TabsTrigger value="tools" className="flex items-center gap-2">
+              <Wrench className="h-4 w-4" />
+              Tools
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {badges.tools}
+              </Badge>
+            </TabsTrigger>
+            
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              AI Config
+              <Badge 
+                variant={aiSettings.openaiApiKey ? "default" : "secondary"} 
+                className="ml-1 text-xs"
+              >
+                {aiSettings.openaiApiKey ? "✓" : "Setup"}
+              </Badge>
+            </TabsTrigger>
+            
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              AI Chat
+              <Badge 
+                variant={aiSettings.openaiApiKey && servers.length > 0 ? "default" : "secondary"} 
+                className="ml-1 text-xs"
+              >
+                {badges.chat}
+              </Badge>
+            </TabsTrigger>
+            
+            <TabsTrigger value="logs" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Activity
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {badges.logs}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="servers" className="space-y-6">
+            <MCPServerForm 
+              onAddServer={handleAddServer} 
+              isLoading={isAddingServer}
+            />
+            <ConnectedServers 
+              servers={servers}
+              onRefreshServer={handleRefreshServer}
+              onRemoveServer={handleRemoveServer}
+              isRefreshing={refreshingServer}
+            />
+          </TabsContent>
+
+          <TabsContent value="tools" className="space-y-6">
+            <AvailableTools 
+              tools={tools}
+              onToolSelect={(tool) => {
+                addLog(`🔧 Tool selected: ${tool.name}`, 'info', '🔧', 'Tool Interaction');
+                toast({
+                  title: "Tool Selected",
+                  description: `Selected ${tool.name} for testing`,
+                });
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <AISettingsCard 
+              settings={aiSettings}
+              onSettingsChange={setAiSettings}
+              onLog={addLog}
+            />
+          </TabsContent>
+
+          <TabsContent value="chat" className="space-y-6">
+            <AIChat 
+              servers={servers}
+              tools={tools}
+              settings={aiSettings}
+              onLog={addLog}
+            />
+          </TabsContent>
+
+          <TabsContent value="logs" className="space-y-6">
+            <ActivityLog 
+              logs={logs}
+              onClearLog={handleClearLog}
+              onExportLog={handleExportLog}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
