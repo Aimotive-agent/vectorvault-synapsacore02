@@ -29,26 +29,16 @@ const DEFAULT_MODELS: OpenAIModel[] = [
 ];
 
 export const AISettingsCard = ({ settings, onSettingsChange, onLog, availableModels: propAvailableModels, openrouterModels: propOpenrouterModels }: AISettingsCardProps) => {
-  const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(propAvailableModels || DEFAULT_MODELS);
-  const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>(propOpenrouterModels || []);
+  // Always use the full model lists from props, don't replace them
   const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
   const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
   const [openaiKeyStatus, setOpenaiKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
 
-  // Update models when props change
-  useEffect(() => {
-    if (propAvailableModels) {
-      setAvailableModels(propAvailableModels);
-    }
-  }, [propAvailableModels]);
-
-  useEffect(() => {
-    if (propOpenrouterModels) {
-      setOpenrouterModels(propOpenrouterModels);
-    }
-  }, [propOpenrouterModels]);
+  // Use the full model lists passed from parent
+  const availableModels = propAvailableModels || DEFAULT_MODELS;
+  const openrouterModels = propOpenrouterModels || [];
 
   const testOpenAIKey = async (apiKey: string) => {
     if (!apiKey?.trim()) {
@@ -82,20 +72,13 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog, availableMod
             pricing: getPricing(model.id)
           }));
 
-        const newModels = models.length > 0 ? models : DEFAULT_MODELS;
-        setAvailableModels(newModels);
+        // Don't replace the model list, just mark as validated
         setOpenaiKeyStatus('valid');
         onLog('✅ OpenAI API key validated successfully', 'success', '✅');
         toast({
           title: "API Key Valid",
-          description: `Found ${models.length} available models`,
+          description: `OpenAI API key is working properly`,
         });
-        
-        // Update the settings with the new models - keep current model if it exists in new list
-        const currentModelExists = newModels.some(m => m.id === settings.selectedModel);
-        if (!currentModelExists && newModels.length > 0) {
-          onSettingsChange({ ...settings, selectedModel: newModels[0].id });
-        }
         
         return true;
       } else {
@@ -151,19 +134,13 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog, availableMod
             } : undefined
           }));
 
-        setOpenrouterModels(models);
+        // Don't replace the model list, just mark as validated
         setOpenrouterKeyStatus('valid');
         onLog('✅ OpenRouter API key validated successfully', 'success', '✅');
         toast({
           title: "API Key Valid",
-          description: `Found ${models.length} available models`,
+          description: `OpenRouter API key is working properly`,
         });
-        
-        // Update the settings with the new models - keep current model if it exists in new list
-        const currentModelExists = models.some(m => m.id === settings.selectedModel);
-        if (!currentModelExists && models.length > 0) {
-          onSettingsChange({ ...settings, selectedModel: models[0].id });
-        }
         
         return true;
       } else {
