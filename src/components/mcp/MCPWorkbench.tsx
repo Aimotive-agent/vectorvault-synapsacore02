@@ -85,9 +85,9 @@ export const MCPWorkbench = () => {
   ];
 
   // Handle settings change with database persistence
-  const handleSettingsChange = async (newSettings: AISettings) => {
+  const handleSettingsChange = (newSettings: AISettings) => {
     setAiSettings(newSettings);
-    await saveSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   // Initialize with welcome log
@@ -543,11 +543,11 @@ export const MCPWorkbench = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-          <AISettingsCard
-            settings={aiSettings}
-            onSettingsChange={handleSettingsChange}
-            onLog={addLog}
-          />
+            <AISettingsCard 
+              settings={aiSettings}
+              onSettingsChange={handleSettingsChange}
+              onLog={addLog}
+            />
           </TabsContent>
 
           <TabsContent value="chat" className="space-y-6">
