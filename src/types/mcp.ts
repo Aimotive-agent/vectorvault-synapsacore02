@@ -63,10 +63,22 @@ export interface ToolCall {
 
 export interface AISettings {
   openaiApiKey: string;
+  openrouterApiKey: string;
+  provider: 'openai' | 'openrouter';
   selectedModel: string;
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+}
+
+export interface OpenRouterModel {
+  id: string;
+  name: string;
+  context_length: number;
+  pricing?: {
+    prompt: number;
+    completion: number;
+  };
 }
 
 export interface PresetMCPServer {

@@ -26,7 +26,9 @@ export const MCPWorkbench = () => {
   // AI Settings state
   const [aiSettings, setAiSettings] = useState<AISettings>({
     openaiApiKey: '',
-    selectedModel: 'gpt-3.5-turbo',
+    openrouterApiKey: '',
+    provider: 'openai',
+    selectedModel: 'gpt-4o-mini',
     temperature: 0.7,
     maxTokens: 1000,
     systemPrompt: 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
@@ -385,7 +387,7 @@ export const MCPWorkbench = () => {
     return {
       servers: servers.length,
       tools: tools.length,
-      chat: aiSettings.openaiApiKey ? 'Ready' : 'Setup',
+      chat: (aiSettings.openaiApiKey || aiSettings.openrouterApiKey) ? 'Ready' : 'Setup',
       logs: logs.length
     };
   };
@@ -449,10 +451,10 @@ export const MCPWorkbench = () => {
               <Settings className="h-4 w-4" />
               AI Config
               <Badge 
-                variant={aiSettings.openaiApiKey ? "default" : "secondary"} 
+                variant={(aiSettings.openaiApiKey || aiSettings.openrouterApiKey) ? "default" : "secondary"} 
                 className="ml-1 text-xs"
               >
-                {aiSettings.openaiApiKey ? "✓" : "Setup"}
+                {(aiSettings.openaiApiKey || aiSettings.openrouterApiKey) ? "✓" : "Setup"}
               </Badge>
             </TabsTrigger>
             

@@ -98,11 +98,27 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
       console.log(`⚠️ AIChat: No tools available for OpenAI`);
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const apiUrl = settings.provider === 'openrouter' 
+      ? 'https://openrouter.ai/api/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions';
+    
+    const apiKey = settings.provider === 'openrouter' 
+      ? settings.openrouterApiKey 
+      : settings.openaiApiKey;
+
+    if (!apiKey) {
+      throw new Error(`${settings.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key not configured`);
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${settings.openaiApiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        ...(settings.provider === 'openrouter' && {
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Synapsecore Super Agent'
+        })
       },
       body: JSON.stringify(requestBody),
     });
@@ -173,11 +189,15 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
         }))
       ];
 
-      const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      const followUpResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${settings.openaiApiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          ...(settings.provider === 'openrouter' && {
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Synapsecore Super Agent'
+          })
         },
         body: JSON.stringify({
           model: settings.selectedModel || 'gpt-3.5-turbo',
@@ -381,9 +401,13 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
   };
 
   const canSendMessage = () => {
+    const hasApiKey = settings.provider === 'openrouter' 
+      ? settings.openrouterApiKey 
+      : settings.openaiApiKey;
+    
     return inputMessage.trim() && 
            !isProcessing && 
-           settings.openaiApiKey && 
+           hasApiKey && 
            settings.selectedModel &&
            servers.some(s => s.status === 'connected');
   };

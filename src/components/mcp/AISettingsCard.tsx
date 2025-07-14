@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Key, Brain, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { AISettings, OpenAIModel } from '@/types/mcp';
+import { AISettings, OpenAIModel, OpenRouterModel } from '@/types/mcp';
 
 interface AISettingsCardProps {
   settings: AISettings;
@@ -27,8 +28,11 @@ const DEFAULT_MODELS: OpenAIModel[] = [
 
 export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettingsCardProps) => {
   const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(DEFAULT_MODELS);
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  const [keyStatus, setKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
+  const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>([]);
+  const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
+  const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
+  const [openaiKeyStatus, setOpenaiKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
+  const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
   const { toast } = useToast();
 
   const testOpenAIKey = async (apiKey: string) => {
@@ -41,7 +45,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
       return false;
     }
 
-    setIsTestingKey(true);
+    setIsTestingOpenAI(true);
     onLog('🔑 Testing OpenAI API key...', 'info', '🔑');
 
     try {
@@ -64,7 +68,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
           }));
 
         setAvailableModels(models.length > 0 ? models : DEFAULT_MODELS);
-        setKeyStatus('valid');
+        setOpenaiKeyStatus('valid');
         onLog('✅ OpenAI API key validated successfully', 'success', '✅');
         toast({
           title: "API Key Valid",
@@ -75,7 +79,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      setKeyStatus('invalid');
+      setOpenaiKeyStatus('invalid');
       onLog(`❌ OpenAI API key validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌');
       toast({
         title: "Invalid API Key",
@@ -84,7 +88,68 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
       });
       return false;
     } finally {
-      setIsTestingKey(false);
+      setIsTestingOpenAI(false);
+    }
+  };
+
+  const testOpenRouterKey = async (apiKey: string) => {
+    if (!apiKey.trim()) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your OpenRouter API key",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    setIsTestingOpenRouter(true);
+    onLog('🔑 Testing OpenRouter API key...', 'info', '🔑');
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const models: OpenRouterModel[] = data.data
+          .filter((model: any) => !model.id.includes('instruct') && !model.id.includes('vision'))
+          .slice(0, 20) // Limit to first 20 models for better UX
+          .map((model: any) => ({
+            id: model.id,
+            name: model.name || model.id,
+            context_length: model.context_length || 4096,
+            pricing: model.pricing ? {
+              prompt: parseFloat(model.pricing.prompt) || 0,
+              completion: parseFloat(model.pricing.completion) || 0
+            } : undefined
+          }));
+
+        setOpenrouterModels(models);
+        setOpenrouterKeyStatus('valid');
+        onLog('✅ OpenRouter API key validated successfully', 'success', '✅');
+        toast({
+          title: "API Key Valid",
+          description: `Found ${models.length} available models`,
+        });
+        return true;
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      setOpenrouterKeyStatus('invalid');
+      onLog(`❌ OpenRouter API key validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌');
+      toast({
+        title: "Invalid API Key",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsTestingOpenRouter(false);
     }
   };
 
@@ -107,24 +172,37 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     return pricingMap[modelId] || { input: 0, output: 0 };
   };
 
-  const handleApiKeyChange = (apiKey: string) => {
+  const handleOpenAIApiKeyChange = (apiKey: string) => {
     onSettingsChange({ ...settings, openaiApiKey: apiKey });
-    setKeyStatus('untested');
+    setOpenaiKeyStatus('untested');
   };
 
-  const handleTestKey = () => {
+  const handleOpenRouterApiKeyChange = (apiKey: string) => {
+    onSettingsChange({ ...settings, openrouterApiKey: apiKey });
+    setOpenrouterKeyStatus('untested');
+  };
+
+  const handleTestOpenAIKey = () => {
     testOpenAIKey(settings.openaiApiKey);
   };
 
-  const getKeyStatusIcon = () => {
-    switch (keyStatus) {
+  const handleTestOpenRouterKey = () => {
+    testOpenRouterKey(settings.openrouterApiKey);
+  };
+
+  const getKeyStatusIcon = (status: 'untested' | 'valid' | 'invalid') => {
+    switch (status) {
       case 'valid': return <CheckCircle className="h-4 w-4 text-success" />;
       case 'invalid': return <AlertCircle className="h-4 w-4 text-destructive" />;
       default: return <Key className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const selectedModel = availableModels.find(m => m.id === settings.selectedModel);
+  const getCurrentModels = () => {
+    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
+  };
+
+  const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);
 
   return (
     <Card className="bg-gradient-surface border shadow-soft">
@@ -134,46 +212,99 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
           AI Configuration
         </CardTitle>
         <CardDescription>
-          Configure your OpenAI API key and model preferences for AI agent interactions
+          Configure your AI provider and model preferences for AI agent interactions
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* API Key Section */}
+        {/* Provider Selection */}
         <div className="space-y-3">
-          <Label htmlFor="apiKey" className="text-sm font-medium">OpenAI API Key</Label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="sk-..."
-                value={settings.openaiApiKey}
-                onChange={(e) => handleApiKeyChange(e.target.value)}
-                className="pr-10"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {getKeyStatusIcon()}
+          <Label className="text-sm font-medium">AI Provider</Label>
+          <Tabs value={settings.provider} onValueChange={(value) => onSettingsChange({ ...settings, provider: value as 'openai' | 'openrouter' })}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="openai">OpenAI</TabsTrigger>
+              <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="openai" className="space-y-4 mt-4">
+              {/* OpenAI API Key */}
+              <div className="space-y-3">
+                <Label htmlFor="openaiApiKey" className="text-sm font-medium">OpenAI API Key</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="openaiApiKey"
+                      type="password"
+                      placeholder="sk-..."
+                      value={settings.openaiApiKey}
+                      onChange={(e) => handleOpenAIApiKeyChange(e.target.value)}
+                      className="pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {getKeyStatusIcon(openaiKeyStatus)}
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleTestOpenAIKey}
+                    disabled={isTestingOpenAI || !settings.openaiApiKey.trim()}
+                    variant="outline"
+                    size="sm"
+                    className="min-w-[80px]"
+                  >
+                    {isTestingOpenAI ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Test'
+                    )}
+                  </Button>
+                </div>
+                {openaiKeyStatus === 'valid' && (
+                  <Badge variant="outline" className="text-success border-success/50">
+                    ✓ API Key Valid
+                  </Badge>
+                )}
               </div>
-            </div>
-            <Button 
-              onClick={handleTestKey}
-              disabled={isTestingKey || !settings.openaiApiKey.trim()}
-              variant="outline"
-              size="sm"
-              className="min-w-[80px]"
-            >
-              {isTestingKey ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Test'
-              )}
-            </Button>
-          </div>
-          {keyStatus === 'valid' && (
-            <Badge variant="outline" className="text-success border-success/50">
-              ✓ API Key Valid
-            </Badge>
-          )}
+            </TabsContent>
+
+            <TabsContent value="openrouter" className="space-y-4 mt-4">
+              {/* OpenRouter API Key */}
+              <div className="space-y-3">
+                <Label htmlFor="openrouterApiKey" className="text-sm font-medium">OpenRouter API Key</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="openrouterApiKey"
+                      type="password"
+                      placeholder="sk-or-..."
+                      value={settings.openrouterApiKey}
+                      onChange={(e) => handleOpenRouterApiKeyChange(e.target.value)}
+                      className="pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {getKeyStatusIcon(openrouterKeyStatus)}
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleTestOpenRouterKey}
+                    disabled={isTestingOpenRouter || !settings.openrouterApiKey.trim()}
+                    variant="outline"
+                    size="sm"
+                    className="min-w-[80px]"
+                  >
+                    {isTestingOpenRouter ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Test'
+                    )}
+                  </Button>
+                </div>
+                {openrouterKeyStatus === 'valid' && (
+                  <Badge variant="outline" className="text-success border-success/50">
+                    ✓ API Key Valid
+                  </Badge>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Model Selection */}
@@ -190,12 +321,12 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
               <SelectValue placeholder="Select a model" />
             </SelectTrigger>
             <SelectContent>
-              {availableModels.map((model) => (
+              {getCurrentModels().map((model: any) => (
                 <SelectItem key={model.id} value={model.id}>
                   <div className="flex flex-col items-start">
                     <span className="font-medium">{model.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {model.context_window.toLocaleString()} tokens
+                      {(model.context_window || model.context_length)?.toLocaleString()} tokens
                     </span>
                   </div>
                 </SelectItem>
@@ -203,21 +334,29 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
             </SelectContent>
           </Select>
           
-          {selectedModel && (
+           {selectedModel && (
             <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1">
               <div className="flex justify-between">
                 <span>Context Window:</span>
-                <span className="font-medium">{selectedModel.context_window.toLocaleString()} tokens</span>
+                <span className="font-medium">{((selectedModel as any).context_window || (selectedModel as any).context_length)?.toLocaleString()} tokens</span>
               </div>
-              {selectedModel.pricing && (
+              {(selectedModel as any).pricing && (
                 <>
                   <div className="flex justify-between">
                     <span>Input Price:</span>
-                    <span className="font-medium">${selectedModel.pricing.input}/1K tokens</span>
+                    <span className="font-medium">
+                      ${settings.provider === 'openrouter' 
+                        ? (selectedModel as any).pricing.prompt 
+                        : (selectedModel as any).pricing.input}/1K tokens
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Output Price:</span>
-                    <span className="font-medium">${selectedModel.pricing.output}/1K tokens</span>
+                    <span className="font-medium">
+                      ${settings.provider === 'openrouter' 
+                        ? (selectedModel as any).pricing.completion 
+                        : (selectedModel as any).pricing.output}/1K tokens
+                    </span>
                   </div>
                 </>
               )}
