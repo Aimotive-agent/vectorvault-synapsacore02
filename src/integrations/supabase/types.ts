@@ -265,6 +265,45 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_servers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          last_connected: string | null
+          name: string
+          status: string
+          tools: Json | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_connected?: string | null
+          name: string
+          status?: string
+          tools?: Json | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_connected?: string | null
+          name?: string
+          status?: string
+          tools?: Json | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           content: string

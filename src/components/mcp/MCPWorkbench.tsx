@@ -7,6 +7,7 @@ import { AISettingsCard } from './AISettingsCard';
 import { AIChat } from './AIChat';
 import { ActivityLog } from './ActivityLog';
 import { useAISettings } from '@/hooks/useAISettings';
+import { useMCPServers } from '@/hooks/useMCPServers';
 import { Bot, Settings, Server, Wrench, MessageSquare, Activity, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export const MCPWorkbench = () => {
-  const [servers, setServers] = useState<MCPServer[]>([]);
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isAddingServer, setIsAddingServer] = useState(false);
@@ -26,6 +26,9 @@ export const MCPWorkbench = () => {
 
   // AI Settings from database
   const { settings: aiSettings, saveSettings, setSettings: setAiSettings } = useAISettings();
+
+  // MCP Servers from database
+  const { servers, isLoading: serversLoading, saveServer, removeServer, setServers } = useMCPServers();
 
   // Enhanced available models with comprehensive lists
   const availableModels = [
@@ -305,7 +308,8 @@ export const MCPWorkbench = () => {
         description
       };
       
-      setServers(prev => [...prev, newServer]);
+      // Save to database and update local state
+      await saveServer(newServer);
       setTools(prev => [...prev, ...discoveredTools.map(tool => ({ 
         ...tool, 
         serverUrl: url, 
@@ -345,11 +349,10 @@ export const MCPWorkbench = () => {
     try {
       const discoveredTools = await discoverTools(server.url);
       
-      setServers(prev => prev.map(s => 
-        s.id === serverId 
-          ? { ...s, tools: discoveredTools, lastConnected: new Date(), status: 'connected' as const }
-          : s
-      ));
+      const updatedServer = { ...server, tools: discoveredTools, lastConnected: new Date(), status: 'connected' as const };
+      
+      // Save to database and update local state
+      await saveServer(updatedServer);
       
       // Update tools list
       setTools(prev => {
@@ -369,9 +372,8 @@ export const MCPWorkbench = () => {
       });
       
     } catch (error) {
-      setServers(prev => prev.map(s => 
-        s.id === serverId ? { ...s, status: 'error' as const } : s
-      ));
+      const errorServer = { ...server, status: 'error' as const };
+      await saveServer(errorServer);
       addLog(`❌ Server refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌', 'Server Management');
       toast({
         title: "Refresh Failed",
@@ -383,11 +385,12 @@ export const MCPWorkbench = () => {
     }
   };
 
-  const handleRemoveServer = (serverId: string) => {
+  const handleRemoveServer = async (serverId: string) => {
     const server = servers.find(s => s.id === serverId);
     if (!server) return;
     
-    setServers(prev => prev.filter(s => s.id !== serverId));
+    // Remove from database
+    await removeServer(serverId);
     setTools(prev => prev.filter(tool => tool.serverId !== serverId));
     
     addLog(`🗑️ Server removed: ${server.name}`, 'info', '🗑️', 'Server Management');
