@@ -6,9 +6,11 @@ import { AvailableTools } from './AvailableTools';
 import { AISettingsCard } from './AISettingsCard';
 import { AIChat } from './AIChat';
 import { ActivityLog } from './ActivityLog';
-import { Bot, Settings, Server, Wrench, MessageSquare, Activity } from 'lucide-react';
+import { Bot, Settings, Server, Wrench, MessageSquare, Activity, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export const MCPWorkbench = () => {
@@ -19,6 +21,7 @@ export const MCPWorkbench = () => {
   const [refreshingServer, setRefreshingServer] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState('servers');
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   // AI Settings state
   const [aiSettings, setAiSettings] = useState<AISettings>({
@@ -393,14 +396,34 @@ export const MCPWorkbench = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-            <Bot className="inline-block mr-3 h-10 w-10 text-primary" />
-            MCP Integration Workbench
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Connect to MCP servers, manage tools, and interact with AI agents
-          </p>
+        <div className="relative">
+          <div className="absolute top-0 right-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-full"
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </div>
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <img 
+                src="/lovable-uploads/9b4be813-c110-45e0-aed0-0ca7c4454219.png" 
+                alt="Synapsecore Logo" 
+                className="h-16 w-16 mr-4"
+              />
+            </div>
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+              Synapsecore Super Agent
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              AI-powered MCP tool orchestration platform
+            </p>
+          </div>
         </div>
 
         {/* Main Content */}
