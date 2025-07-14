@@ -487,9 +487,24 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
         <CardDescription className="flex items-center justify-between">
           <span>Chat with your AI agent that has access to all connected MCP tools and services</span>
           <div className="flex items-center gap-3 text-xs">
-            <Badge variant="secondary" className="capitalize">
-              {settings.provider}
-            </Badge>
+            {/* Provider Selection */}
+            <div className="flex items-center gap-2">
+              <Settings className="h-3 w-3" />
+              <Select
+                value={settings.provider}
+                onValueChange={(value) => onSettingsChange({ ...settings, provider: value as 'openai' | 'openrouter' })}
+              >
+                <SelectTrigger className="h-7 text-xs min-w-[100px] border-muted">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Model Selection */}
             <div className="flex items-center gap-2">
               <Brain className="h-3 w-3" />
               <Select
@@ -677,7 +692,6 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
             <Button
               onClick={handleSendMessage}
               disabled={!canSendMessage()}
-              variant="mcp"
               size="sm"
               className="px-4"
             >
