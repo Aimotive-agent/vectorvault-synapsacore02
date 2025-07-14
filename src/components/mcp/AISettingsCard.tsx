@@ -36,7 +36,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   const { toast } = useToast();
 
   const testOpenAIKey = async (apiKey: string) => {
-    if (!apiKey.trim()) {
+    if (!apiKey?.trim()) {
       toast({
         title: "API Key Required",
         description: "Please enter your OpenAI API key",
@@ -93,7 +93,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   };
 
   const testOpenRouterKey = async (apiKey: string) => {
-    if (!apiKey.trim()) {
+    if (!apiKey?.trim()) {
       toast({
         title: "API Key Required",
         description: "Please enter your OpenRouter API key",
@@ -245,7 +245,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
                   </div>
                   <Button 
                     onClick={handleTestOpenAIKey}
-                    disabled={isTestingOpenAI || !settings.openaiApiKey.trim()}
+                    disabled={isTestingOpenAI || !settings.openaiApiKey?.trim()}
                     variant="outline"
                     size="sm"
                     className="min-w-[80px]"
@@ -285,7 +285,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
                   </div>
                   <Button 
                     onClick={handleTestOpenRouterKey}
-                    disabled={isTestingOpenRouter || !settings.openrouterApiKey.trim()}
+                    disabled={isTestingOpenRouter || !settings.openrouterApiKey?.trim()}
                     variant="outline"
                     size="sm"
                     className="min-w-[80px]"

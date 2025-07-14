@@ -40,7 +40,16 @@ export const MCPWorkbench = () => {
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
-        setAiSettings(parsed);
+        // Ensure backward compatibility by providing defaults for new properties
+        setAiSettings({
+          openaiApiKey: parsed.openaiApiKey || '',
+          openrouterApiKey: parsed.openrouterApiKey || '',
+          provider: parsed.provider || 'openai',
+          selectedModel: parsed.selectedModel || 'gpt-4o-mini',
+          temperature: parsed.temperature || 0.7,
+          maxTokens: parsed.maxTokens || 1000,
+          systemPrompt: parsed.systemPrompt || 'You are a helpful AI assistant with access to MCP tools. Use the available tools to help users accomplish their tasks efficiently and provide clear explanations of what you\'re doing.'
+        });
       } catch (error) {
         console.error('Failed to load saved settings:', error);
       }
