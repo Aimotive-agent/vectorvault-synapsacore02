@@ -45,17 +45,17 @@ export const useAISettings = () => {
         throw error;
       }
 
-      if (data) {
-        setSettings({
-          openaiApiKey: data.openai_api_key || '',
-          openrouterApiKey: data.openrouter_api_key || '',
-          provider: data.provider as 'openai' | 'openrouter',
-          selectedModel: data.selected_model,
-          temperature: data.temperature,
-          maxTokens: data.max_tokens,
-          systemPrompt: data.system_prompt,
-        });
-      }
+       if (data) {
+         setSettings({
+           openaiApiKey: data.openai_api_key || '',
+           openrouterApiKey: data.openrouter_api_key || '',
+           provider: data.provider as 'openai' | 'openrouter',
+           selectedModel: data.selected_model,
+           temperature: data.temperature,
+           maxTokens: data.max_tokens,
+           systemPrompt: data.system_prompt || DEFAULT_SETTINGS.systemPrompt,
+         });
+       }
     } catch (error) {
       console.error('Error loading AI settings:', error);
       toast({
