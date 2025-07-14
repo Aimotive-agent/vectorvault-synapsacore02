@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Bot, User, Send, Loader2, Wrench, AlertCircle, Clock, CheckCircle, Copy, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { ChatMessage, MCPTool, MCPServer, AISettings, ToolCall } from '@/types/mcp';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -20,7 +21,9 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [copiedMessage, setCopiedMessage] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -359,6 +362,24 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
     }
   };
 
+  const copyToClipboard = async (text: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessage(messageId);
+      toast({
+        title: "Copied to clipboard",
+        description: "Message content copied successfully",
+      });
+      setTimeout(() => setCopiedMessage(null), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   const canSendMessage = () => {
     return inputMessage.trim() && 
            !isProcessing && 
@@ -403,12 +424,28 @@ export const AIChat = ({ servers, tools, settings, onLog }: AIChatProps) => {
                         {getMessageIcon(message.role)}
                       </div>
                       
-                      <div className={`p-3 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-card border'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                       <div className={`p-3 rounded-lg relative group ${
+                         message.role === 'user'
+                           ? 'bg-primary text-primary-foreground'
+                           : 'bg-card border'
+                       }`}>
+                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                         
+                         {/* Copy button for assistant messages */}
+                         {message.role === 'assistant' && (
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                             onClick={() => copyToClipboard(message.content, message.id)}
+                           >
+                             {copiedMessage === message.id ? (
+                               <Check className="h-3 w-3" />
+                             ) : (
+                               <Copy className="h-3 w-3" />
+                             )}
+                           </Button>
+                         )}
                         
                         {/* Tool Calls */}
                         {message.toolCalls && message.toolCalls.length > 0 && (
