@@ -91,15 +91,32 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
     const systemMessage = {
       role: 'system',
-      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools. Available tools: ${tools.map(t => `${t.name} - ${t.description}`).join(', ')}. When a user asks for something that can be accomplished with these tools, use them to help complete the task. Be specific about what you're doing and explain the results.`
+      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools. Available tools: ${tools.map(t => `${t.name} - ${t.description}`).join(', ')}. When a user asks for something that can be accomplished with these tools, use them to help complete the task. Be specific about what you're doing and explain the results. You can also analyze uploaded files, images, and documents.`
     };
 
     const formattedMessages = [
       systemMessage,
-      ...messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
+      ...messages.map(msg => {
+        const messageContent: any = {
+          role: msg.role,
+          content: msg.content
+        };
+
+        // Add file attachments if present (for vision models)
+        if (msg.file_attachments && msg.file_attachments.length > 0) {
+          messageContent.content = [
+            { type: 'text', text: msg.content },
+            ...msg.file_attachments
+              .filter(file => file.type?.startsWith('image/'))
+              .map(file => ({
+                type: 'image_url',
+                image_url: { url: file.url }
+              }))
+          ];
+        }
+
+        return messageContent;
+      })
     ];
 
     const requestBody = {
@@ -456,10 +473,42 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     // Removed the server requirement to allow basic AI chat without MCP tools
   };
 
-  const handleFileAnalyzed = (analysis: string, fileName: string) => {
-    const fileMessage = `📁 **File uploaded: ${fileName}**\n\n${analysis}`;
-    setInputMessage(prev => prev + (prev ? '\n\n' : '') + fileMessage);
+  const handleFileAnalyzed = async (analysis: string, fileName: string, fileUrl?: string, fileType?: string) => {
+    // Create session if none exists
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      const newSession = await createSession();
+      sessionId = newSession?.id;
+      if (!sessionId) return;
+    }
+
+    // Create a file upload message that appears in chat
+    const fileMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: `📁 **File uploaded: ${fileName}**\n\n${analysis}`,
+      timestamp: new Date(),
+      file_attachments: fileUrl ? [{
+        name: fileName,
+        url: fileUrl,
+        type: fileType || 'unknown',
+        size: 0
+      }] : undefined
+    };
+
+    setMessages(prev => [...prev, fileMessage]);
+    
+    // Save file message to database
+    await saveMessage(fileMessage, sessionId, settings.selectedModel, settings.provider);
+    
     setShowFileUpload(false);
+    
+    // Auto-analyze the file with AI
+    if (fileUrl && fileType?.startsWith('image/')) {
+      setTimeout(() => {
+        setInputMessage(`Please analyze this uploaded image: ${fileName}`);
+      }, 500);
+    }
   };
 
   const handleNewChat = async () => {

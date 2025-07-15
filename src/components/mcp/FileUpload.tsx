@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Upload, File, X, Loader2 } from 'lucide-react';
 
 interface FileUploadProps {
-  onFileAnalyzed: (analysis: string, fileName: string) => void;
+  onFileAnalyzed: (analysis: string, fileName: string, fileUrl?: string, fileType?: string) => void;
   className?: string;
 }
 
@@ -59,8 +59,11 @@ export const FileUpload = ({ onFileAnalyzed, className }: FileUploadProps) => {
           continue;
         }
 
-        // Check file type
-        const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'text/csv', 'application/json'];
+        // Check file type - now including images
+        const allowedTypes = [
+          'text/plain', 'text/markdown', 'application/pdf', 'text/csv', 'application/json',
+          'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+        ];
         if (!allowedTypes.includes(file.type)) {
           toast({
             title: "Unsupported file type",
@@ -127,7 +130,9 @@ export const FileUpload = ({ onFileAnalyzed, className }: FileUploadProps) => {
       // Read file content for analysis
       let content = '';
       
-      if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/csv') {
+      if (file.type.startsWith('image/')) {
+        content = `Image file: ${file.name} (${(file.size / 1024).toFixed(1)} KB) - This image has been uploaded and is ready for AI visual analysis.`;
+      } else if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/csv') {
         const response = await fetch(file.url);
         content = await response.text();
       } else if (file.type === 'application/json') {
@@ -138,8 +143,26 @@ export const FileUpload = ({ onFileAnalyzed, className }: FileUploadProps) => {
         content = `PDF file: ${file.name} (${(file.size / 1024).toFixed(1)} KB) - PDF content analysis requires additional processing.`;
       }
 
-      // Generate analysis
-      const analysis = `📄 **File Analysis: ${file.name}**
+      // Generate analysis based on file type
+      let analysis = '';
+      if (file.type.startsWith('image/')) {
+        analysis = `🖼️ **Image uploaded: ${file.name}**
+
+**File Details:**
+- Type: ${file.type}
+- Size: ${(file.size / 1024).toFixed(1)} KB
+- Uploaded: ${new Date().toLocaleString()}
+
+This image has been uploaded and is ready for AI visual analysis. You can ask me to:
+- Describe what's in the image
+- Analyze text or data shown in the image
+- Extract information from the image
+- Compare it with other images
+- Generate insights or summaries
+
+Ask me anything about this image!`;
+      } else {
+        analysis = `📄 **File Analysis: ${file.name}**
 
 **File Details:**
 - Type: ${file.type}
@@ -150,14 +173,15 @@ export const FileUpload = ({ onFileAnalyzed, className }: FileUploadProps) => {
 ${content.substring(0, 1000)}${content.length > 1000 ? '...' : ''}
 
 This file has been uploaded and is ready for AI analysis. You can ask me questions about its content, request summaries, or have me process the data in various ways.`;
+      }
 
       // Update the file with analysis
       setUploadedFiles(prev => 
         prev.map(f => f.id === file.id ? { ...f, analysis } : f)
       );
 
-      // Notify parent component
-      onFileAnalyzed(analysis, file.name);
+      // Notify parent component with file details
+      onFileAnalyzed(analysis, file.name, file.url, file.type);
     } catch (error) {
       console.error('Error analyzing file:', error);
       toast({
@@ -206,7 +230,7 @@ This file has been uploaded and is ready for AI analysis. You can ask me questio
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".txt,.md,.pdf,.csv,.json"
+            accept=".txt,.md,.pdf,.csv,.json,.jpg,.jpeg,.png,.gif,.webp"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -233,10 +257,10 @@ This file has been uploaded and is ready for AI analysis. You can ask me questio
           </Button>
           
           <p className="text-sm text-muted-foreground">
-            Upload text files, PDFs, CSVs, or JSON files for AI analysis
+            Upload text files, PDFs, CSVs, JSON files, or images for AI analysis
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Max 10MB per file • Supported: .txt, .md, .pdf, .csv, .json
+            Max 10MB per file • Supported: .txt, .md, .pdf, .csv, .json, .jpg, .png, .gif, .webp
           </p>
         </div>
       </Card>

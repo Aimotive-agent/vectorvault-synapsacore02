@@ -51,6 +51,14 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   toolCalls?: ToolCall[];
+  file_attachments?: FileAttachment[];
+}
+
+export interface FileAttachment {
+  name: string;
+  url: string;
+  type: string;
+  size: number;
 }
 
 export interface ToolCall {
