@@ -251,12 +251,18 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     onSettingsChange(updatedSettings);
   };
 
-  const handleTestOpenAIKey = () => {
-    testOpenAIKey(settings.openaiApiKey);
+  const handleConnectOpenAI = async () => {
+    if (await testOpenAIKey(settings.openaiApiKey)) {
+      // Auto-save settings on successful connection
+      await onSettingsChange(settings);
+    }
   };
 
-  const handleTestOpenRouterKey = () => {
-    testOpenRouterKey(settings.openrouterApiKey);
+  const handleConnectOpenRouter = async () => {
+    if (await testOpenRouterKey(settings.openrouterApiKey)) {
+      // Auto-save settings on successful connection
+      await onSettingsChange(settings);
+    }
   };
 
   const getKeyStatusIcon = (status: 'untested' | 'valid' | 'invalid') => {
@@ -314,16 +320,18 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
                     </div>
                   </div>
                   <Button 
-                    onClick={handleTestOpenAIKey}
+                    onClick={handleConnectOpenAI}
                     disabled={isTestingOpenAI || !settings.openaiApiKey?.trim()}
-                    variant="outline"
+                    variant={openaiKeyStatus === 'valid' ? 'default' : 'outline'}
                     size="sm"
-                    className="min-w-[80px]"
+                    className="min-w-[90px]"
                   >
                     {isTestingOpenAI ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : openaiKeyStatus === 'valid' ? (
+                      'Connected'
                     ) : (
-                      'Test'
+                      'Connect'
                     )}
                   </Button>
                 </div>
@@ -354,16 +362,18 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
                     </div>
                   </div>
                   <Button 
-                    onClick={handleTestOpenRouterKey}
+                    onClick={handleConnectOpenRouter}
                     disabled={isTestingOpenRouter || !settings.openrouterApiKey?.trim()}
-                    variant="outline"
+                    variant={openrouterKeyStatus === 'valid' ? 'default' : 'outline'}
                     size="sm"
-                    className="min-w-[80px]"
+                    className="min-w-[90px]"
                   >
                     {isTestingOpenRouter ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : openrouterKeyStatus === 'valid' ? (
+                      'Connected'
                     ) : (
-                      'Test'
+                      'Connect'
                     )}
                   </Button>
                 </div>

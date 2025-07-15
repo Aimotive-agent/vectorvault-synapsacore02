@@ -30,9 +30,15 @@ export const MCPWorkbench = () => {
   // MCP Servers from database
   const { servers, isLoading: serversLoading, saveServer, removeServer, setServers } = useMCPServers();
 
-  // Comprehensive OpenAI model list (50+ models)
+  // Comprehensive OpenAI model list (70+ models)
   const availableModels = [
-    // GPT-4 Family
+    // Latest GPT-4 Family
+    { id: 'gpt-4.1-2025-04-14', name: 'GPT-4.1 (April 2025)', context_window: 200000, pricing: { input: 0.0025, output: 0.010 } },
+    { id: 'o3-2025-04-16', name: 'o3 Reasoning Model', context_window: 128000, pricing: { input: 0.015, output: 0.060 } },
+    { id: 'o4-mini-2025-04-16', name: 'o4 Mini Reasoning', context_window: 128000, pricing: { input: 0.003, output: 0.012 } },
+    { id: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini (April 2025)', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
+    
+    // GPT-4 Family (Current)
     { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000, pricing: { input: 0.005, output: 0.015 } },
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
@@ -44,6 +50,7 @@ export const MCPWorkbench = () => {
     { id: 'gpt-4-0613', name: 'GPT-4 (June 2023)', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
     { id: 'gpt-4-32k', name: 'GPT-4 32K', context_window: 32768, pricing: { input: 0.06, output: 0.12 } },
     { id: 'gpt-4-32k-0613', name: 'GPT-4 32K (June 2023)', context_window: 32768, pricing: { input: 0.06, output: 0.12 } },
+    { id: 'gpt-4-vision-preview', name: 'GPT-4 Vision Preview', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
     
     // GPT-3.5 Family
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
@@ -51,6 +58,8 @@ export const MCPWorkbench = () => {
     { id: 'gpt-3.5-turbo-1106', name: 'GPT-3.5 Turbo (Nov 2023)', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
     { id: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo (Jan 2024)', context_window: 16385, pricing: { input: 0.0005, output: 0.0015 } },
     { id: 'gpt-3.5-turbo-instruct', name: 'GPT-3.5 Turbo Instruct', context_window: 4096, pricing: { input: 0.0015, output: 0.002 } },
+    { id: 'gpt-3.5-turbo-0613', name: 'GPT-3.5 Turbo (June 2023)', context_window: 4096, pricing: { input: 0.0015, output: 0.002 } },
+    { id: 'gpt-3.5-turbo-16k-0613', name: 'GPT-3.5 Turbo 16K (June 2023)', context_window: 16385, pricing: { input: 0.003, output: 0.004 } },
     
     // DALL-E Models
     { id: 'dall-e-3', name: 'DALL-E 3', context_window: 4096, pricing: { input: 0.04, output: 0.08 } },
@@ -67,18 +76,49 @@ export const MCPWorkbench = () => {
     { id: 'text-embedding-3-large', name: 'Text Embedding 3 Large', context_window: 8191, pricing: { input: 0.00013, output: 0.00013 } },
     { id: 'text-embedding-3-small', name: 'Text Embedding 3 Small', context_window: 8191, pricing: { input: 0.00002, output: 0.00002 } },
     { id: 'text-embedding-ada-002', name: 'Text Embedding Ada 002', context_window: 8191, pricing: { input: 0.0001, output: 0.0001 } },
+    
+    // GPT-4 Variants & Specialized Models
+    { id: 'gpt-4-base', name: 'GPT-4 Base', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+    { id: 'gpt-4-code-interpreter', name: 'GPT-4 Code Interpreter', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+    { id: 'gpt-4-browsing', name: 'GPT-4 with Browsing', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+    { id: 'gpt-4-plugins', name: 'GPT-4 with Plugins', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+    
+    // Function Calling Variants
+    { id: 'gpt-4-0613-function', name: 'GPT-4 (June 2023) Function Calling', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
+    { id: 'gpt-3.5-turbo-0613-function', name: 'GPT-3.5 Turbo Function Calling', context_window: 4096, pricing: { input: 0.0015, output: 0.002 } },
+    
+    // Legacy Models (still supported)
+    { id: 'text-davinci-003', name: 'Text Davinci 003', context_window: 4097, pricing: { input: 0.02, output: 0.02 } },
+    { id: 'text-davinci-002', name: 'Text Davinci 002', context_window: 4097, pricing: { input: 0.02, output: 0.02 } },
+    { id: 'text-curie-001', name: 'Text Curie 001', context_window: 2049, pricing: { input: 0.002, output: 0.002 } },
+    { id: 'text-babbage-001', name: 'Text Babbage 001', context_window: 2049, pricing: { input: 0.0005, output: 0.0005 } },
+    { id: 'text-ada-001', name: 'Text Ada 001', context_window: 2049, pricing: { input: 0.0004, output: 0.0004 } },
+    
+    // Code Models
+    { id: 'code-davinci-002', name: 'Code Davinci 002', context_window: 8001, pricing: { input: 0.002, output: 0.002 } },
+    { id: 'code-cushman-001', name: 'Code Cushman 001', context_window: 2048, pricing: { input: 0.0012, output: 0.0012 } },
+    
+    // Moderation
+    { id: 'text-moderation-stable', name: 'Text Moderation Stable', context_window: 32768, pricing: { input: 0.0002, output: 0.0002 } },
+    { id: 'text-moderation-latest', name: 'Text Moderation Latest', context_window: 32768, pricing: { input: 0.0002, output: 0.0002 } },
   ];
 
-  // Comprehensive OpenRouter model list (100+ models)
+  // Comprehensive OpenRouter model list (150+ models)
   const openrouterModels = [
-    // OpenAI Models via OpenRouter
+    // Latest OpenAI Models via OpenRouter
+    { id: 'openai/gpt-4.1-2025-04-14', name: 'GPT-4.1 (April 2025) - OpenRouter', context_length: 200000, pricing: { prompt: 0.0025, completion: 0.010 } },
+    { id: 'openai/o3-2025-04-16', name: 'o3 Reasoning - OpenRouter', context_length: 128000, pricing: { prompt: 0.015, completion: 0.060 } },
+    { id: 'openai/o4-mini-2025-04-16', name: 'o4 Mini Reasoning - OpenRouter', context_length: 128000, pricing: { prompt: 0.003, completion: 0.012 } },
     { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000, pricing: { prompt: 0.005, completion: 0.015 } },
     { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', context_length: 128000, pricing: { prompt: 0.00015, completion: 0.0006 } },
     { id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo (OpenRouter)', context_length: 128000, pricing: { prompt: 0.01, completion: 0.03 } },
     { id: 'openai/gpt-4', name: 'GPT-4 (OpenRouter)', context_length: 8192, pricing: { prompt: 0.03, completion: 0.06 } },
     { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo (OpenRouter)', context_length: 16385, pricing: { prompt: 0.001, completion: 0.002 } },
     
-    // Anthropic Claude Models
+    // Latest Anthropic Claude Models
+    { id: 'anthropic/claude-4-20250514', name: 'Claude 4 Opus (May 2025)', context_length: 200000, pricing: { prompt: 0.015, completion: 0.075 } },
+    { id: 'anthropic/claude-sonnet-4-20250514', name: 'Claude 4 Sonnet (May 2025)', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
+    { id: 'anthropic/claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', context_length: 200000, pricing: { prompt: 0.0008, completion: 0.004 } },
     { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
     { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', context_length: 200000, pricing: { prompt: 0.015, completion: 0.075 } },
     { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
@@ -88,15 +128,25 @@ export const MCPWorkbench = () => {
     { id: 'anthropic/claude-instant-1', name: 'Claude Instant 1', context_length: 100000, pricing: { prompt: 0.0008, completion: 0.0024 } },
     
     // Google Models
-    { id: 'google/gemini-pro', name: 'Gemini Pro', context_length: 32768, pricing: { prompt: 0.0005, completion: 0.0015 } },
+    { id: 'google/gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)', context_length: 1000000, pricing: { prompt: 0.001, completion: 0.002 } },
+    { id: 'google/gemini-exp-1206', name: 'Gemini Experimental 1206', context_length: 2000000, pricing: { prompt: 0.002, completion: 0.008 } },
     { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', context_length: 1000000, pricing: { prompt: 0.0025, completion: 0.0075 } },
+    { id: 'google/gemini-pro', name: 'Gemini Pro', context_length: 32768, pricing: { prompt: 0.0005, completion: 0.0015 } },
     { id: 'google/gemini-pro-vision', name: 'Gemini Pro Vision', context_length: 16384, pricing: { prompt: 0.00025, completion: 0.0005 } },
+    { id: 'google/gemma-2-27b-it', name: 'Gemma 2 27B Instruct', context_length: 8192, pricing: { prompt: 0.00027, completion: 0.00027 } },
+    { id: 'google/gemma-2-9b-it', name: 'Gemma 2 9B Instruct', context_length: 8192, pricing: { prompt: 0.0002, completion: 0.0002 } },
     { id: 'google/gemma-7b-it', name: 'Gemma 7B Instruct', context_length: 8192, pricing: { prompt: 0.0001, completion: 0.0001 } },
     { id: 'google/gemma-2b-it', name: 'Gemma 2B Instruct', context_length: 8192, pricing: { prompt: 0.0001, completion: 0.0001 } },
     { id: 'google/palm-2-chat-bison', name: 'PaLM 2 Chat', context_length: 25000, pricing: { prompt: 0.0005, completion: 0.0005 } },
     { id: 'google/palm-2-codechat-bison', name: 'PaLM 2 Code Chat', context_length: 20000, pricing: { prompt: 0.0005, completion: 0.0005 } },
     
-    // Meta Llama Models
+    // Meta Llama Models (Latest)
+    { id: 'meta-llama/llama-3.2-405b-instruct', name: 'Llama 3.2 405B Instruct', context_length: 128000, pricing: { prompt: 0.005, completion: 0.005 } },
+    { id: 'meta-llama/llama-3.2-90b-instruct', name: 'Llama 3.2 90B Instruct', context_length: 128000, pricing: { prompt: 0.002, completion: 0.002 } },
+    { id: 'meta-llama/llama-3.2-70b-instruct', name: 'Llama 3.2 70B Instruct', context_length: 128000, pricing: { prompt: 0.00088, completion: 0.00088 } },
+    { id: 'meta-llama/llama-3.2-11b-vision-instruct', name: 'Llama 3.2 11B Vision', context_length: 128000, pricing: { prompt: 0.00055, completion: 0.00055 } },
+    { id: 'meta-llama/llama-3.2-3b-instruct', name: 'Llama 3.2 3B Instruct', context_length: 128000, pricing: { prompt: 0.0006, completion: 0.0006 } },
+    { id: 'meta-llama/llama-3.2-1b-instruct', name: 'Llama 3.2 1B Instruct', context_length: 128000, pricing: { prompt: 0.0004, completion: 0.0004 } },
     { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B Instruct', context_length: 128000, pricing: { prompt: 0.005, completion: 0.005 } },
     { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B Instruct', context_length: 128000, pricing: { prompt: 0.00088, completion: 0.00088 } },
     { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B Instruct', context_length: 128000, pricing: { prompt: 0.00018, completion: 0.00018 } },
@@ -110,19 +160,38 @@ export const MCPWorkbench = () => {
     { id: 'meta-llama/codellama-13b-instruct', name: 'Code Llama 13B', context_length: 4096, pricing: { prompt: 0.00022, completion: 0.00022 } },
     { id: 'meta-llama/codellama-7b-instruct', name: 'Code Llama 7B', context_length: 4096, pricing: { prompt: 0.00018, completion: 0.00018 } },
     
-    // Mistral Models
+    // Mistral Models (Latest)
+    { id: 'mistralai/mistral-large-2411', name: 'Mistral Large (November 2024)', context_length: 128000, pricing: { prompt: 0.003, completion: 0.009 } },
     { id: 'mistralai/mistral-large', name: 'Mistral Large', context_length: 128000, pricing: { prompt: 0.008, completion: 0.024 } },
     { id: 'mistralai/mistral-medium', name: 'Mistral Medium', context_length: 32000, pricing: { prompt: 0.0027, completion: 0.0081 } },
     { id: 'mistralai/mistral-small', name: 'Mistral Small', context_length: 32000, pricing: { prompt: 0.002, completion: 0.006 } },
+    { id: 'mistralai/mistral-nemo', name: 'Mistral Nemo', context_length: 128000, pricing: { prompt: 0.0003, completion: 0.0003 } },
+    { id: 'mistralai/codestral-latest', name: 'Codestral Latest', context_length: 32000, pricing: { prompt: 0.0003, completion: 0.0003 } },
     { id: 'mistralai/mistral-7b-instruct', name: 'Mistral 7B Instruct', context_length: 32768, pricing: { prompt: 0.00013, completion: 0.00013 } },
     { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B Instruct', context_length: 32000, pricing: { prompt: 0.00024, completion: 0.00024 } },
     { id: 'mistralai/mixtral-8x22b-instruct', name: 'Mixtral 8x22B Instruct', context_length: 64000, pricing: { prompt: 0.00065, completion: 0.00065 } },
     
     // Cohere Models  
+    { id: 'cohere/command-r-plus-08-2024', name: 'Command R+ (August 2024)', context_length: 128000, pricing: { prompt: 0.003, completion: 0.015 } },
     { id: 'cohere/command-r-plus', name: 'Command R+', context_length: 128000, pricing: { prompt: 0.003, completion: 0.015 } },
     { id: 'cohere/command-r', name: 'Command R', context_length: 128000, pricing: { prompt: 0.0005, completion: 0.0015 } },
     { id: 'cohere/command', name: 'Command', context_length: 4096, pricing: { prompt: 0.00005, completion: 0.00005 } },
     { id: 'cohere/command-nightly', name: 'Command Nightly', context_length: 4096, pricing: { prompt: 0.00005, completion: 0.00005 } },
+    
+    // xAI Grok Models
+    { id: 'x-ai/grok-beta', name: 'Grok Beta', context_length: 131072, pricing: { prompt: 0.005, completion: 0.015 } },
+    { id: 'x-ai/grok-vision-beta', name: 'Grok Vision Beta', context_length: 8192, pricing: { prompt: 0.005, completion: 0.015 } },
+    
+    // DeepSeek Models
+    { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', context_length: 64000, pricing: { prompt: 0.00014, completion: 0.00028 } },
+    { id: 'deepseek/deepseek-coder', name: 'DeepSeek Coder', context_length: 16000, pricing: { prompt: 0.00014, completion: 0.00028 } },
+    
+    // Alibaba Qwen Models
+    { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', context_length: 131072, pricing: { prompt: 0.0009, completion: 0.0009 } },
+    { id: 'qwen/qwen-2.5-32b-instruct', name: 'Qwen 2.5 32B Instruct', context_length: 131072, pricing: { prompt: 0.0007, completion: 0.0007 } },
+    { id: 'qwen/qwen-2.5-14b-instruct', name: 'Qwen 2.5 14B Instruct', context_length: 131072, pricing: { prompt: 0.0003, completion: 0.0003 } },
+    { id: 'qwen/qwen-2.5-7b-instruct', name: 'Qwen 2.5 7B Instruct', context_length: 131072, pricing: { prompt: 0.0002, completion: 0.0002 } },
+    { id: 'qwen/qwen-2-72b-instruct', name: 'Qwen 2 72B Instruct', context_length: 32768, pricing: { prompt: 0.0009, completion: 0.0009 } },
     
     // Microsoft Models
     { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM 2 8x22B', context_length: 65536, pricing: { prompt: 0.00063, completion: 0.00063 } },
@@ -135,30 +204,47 @@ export const MCPWorkbench = () => {
     { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small Online', context_length: 127072, pricing: { prompt: 0.0002, completion: 0.0002 } },
     { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge Online', context_length: 127072, pricing: { prompt: 0.005, completion: 0.005 } },
     
-    // Moonshot AI
-    { id: 'moonshotai/kimi-k2:free', name: 'Moonshot Kimi K2 (Free)', context_length: 128000, pricing: { prompt: 0, completion: 0 } },
-    { id: 'moonshotai/kimi-k1', name: 'Moonshot Kimi K1', context_length: 32000, pricing: { prompt: 0.0014, completion: 0.0014 } },
-    
-    // Other Popular Models
+    // Nous Research Models
     { id: 'nousresearch/nous-hermes-2-mixtral-8x7b-dpo', name: 'Nous Hermes 2 Mixtral 8x7B DPO', context_length: 32000, pricing: { prompt: 0.00027, completion: 0.00027 } },
     { id: 'nousresearch/nous-hermes-llama2-13b', name: 'Nous Hermes Llama2 13B', context_length: 4096, pricing: { prompt: 0.00018, completion: 0.00018 } },
     { id: 'nousresearch/nous-hermes-2-yi-34b', name: 'Nous Hermes 2 Yi 34B', context_length: 4096, pricing: { prompt: 0.00072, completion: 0.00072 } },
-    { id: 'openchat/openchat-7b', name: 'OpenChat 7B', context_length: 8192, pricing: { prompt: 0.00013, completion: 0.00013 } },
-    { id: 'teknium/openhermes-2-mistral-7b', name: 'OpenHermes 2 Mistral 7B', context_length: 4096, pricing: { prompt: 0.00013, completion: 0.00013 } },
+    { id: 'nousresearch/nous-capybara-34b', name: 'Nous Capybara 34B', context_length: 32768, pricing: { prompt: 0.0009, completion: 0.0009 } },
+    { id: 'nousresearch/hermes-3-llama-3.1-405b', name: 'Hermes 3 Llama 3.1 405B', context_length: 128000, pricing: { prompt: 0.005, completion: 0.005 } },
+    
+    // Inflection AI
+    { id: 'inflection/inflection-2.5', name: 'Inflection 2.5', context_length: 32000, pricing: { prompt: 0.0025, completion: 0.0025 } },
+    
+    // 01.AI Models
+    { id: '01-ai/yi-large', name: 'Yi Large', context_length: 32768, pricing: { prompt: 0.003, completion: 0.003 } },
+    { id: '01-ai/yi-large-turbo', name: 'Yi Large Turbo', context_length: 16384, pricing: { prompt: 0.0003, completion: 0.0003 } },
+    { id: '01-ai/yi-vision', name: 'Yi Vision', context_length: 4096, pricing: { prompt: 0.0006, completion: 0.0006 } },
+    
+    // Anthropic Alternative
+    { id: 'anthropic/claude-2.0', name: 'Claude 2.0', context_length: 100000, pricing: { prompt: 0.008, completion: 0.024 } },
+    { id: 'anthropic/claude-instant-1.2', name: 'Claude Instant 1.2', context_length: 100000, pricing: { prompt: 0.0008, completion: 0.0024 } },
+    
+    // Free Models
+    { id: 'microsoft/phi-3-mini-128k-instruct:free', name: 'Phi-3 Mini 128K (Free)', context_length: 128000, pricing: { prompt: 0, completion: 0 } },
+    { id: 'google/gemma-7b-it:free', name: 'Gemma 7B Instruct (Free)', context_length: 8192, pricing: { prompt: 0, completion: 0 } },
+    { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)', context_length: 128000, pricing: { prompt: 0, completion: 0 } },
+    { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B (Free)', context_length: 32768, pricing: { prompt: 0, completion: 0 } },
+    { id: 'huggingfaceh4/zephyr-7b-beta:free', name: 'Zephyr 7B Beta (Free)', context_length: 32768, pricing: { prompt: 0, completion: 0 } },
+    { id: 'openchat/openchat-7b:free', name: 'OpenChat 7B (Free)', context_length: 8192, pricing: { prompt: 0, completion: 0 } },
+    { id: 'gryphe/mythomist-7b:free', name: 'MythoMist 7B (Free)', context_length: 32768, pricing: { prompt: 0, completion: 0 } },
+    
+    // Additional High-Quality Models
+    { id: 'cognitive-computations/dolphin-mixtral-8x7b', name: 'Dolphin Mixtral 8x7B', context_length: 32000, pricing: { prompt: 0.0005, completion: 0.0005 } },
     { id: 'teknium/openhermes-2.5-mistral-7b', name: 'OpenHermes 2.5 Mistral 7B', context_length: 4096, pricing: { prompt: 0.00013, completion: 0.00013 } },
-    { id: 'gryphe/mythomist-7b', name: 'MythoMist 7B', context_length: 32768, pricing: { prompt: 0.00013, completion: 0.00013 } },
-    { id: 'gryphe/mythomax-l2-13b', name: 'MythoMax L2 13B', context_length: 4096, pricing: { prompt: 0.00018, completion: 0.00018 } },
+    { id: 'lizpreciatior/lzlv-70b-fp16-hf', name: 'LZLV 70B', context_length: 4096, pricing: { prompt: 0.00059, completion: 0.00078 } },
+    { id: 'alpindale/goliath-120b', name: 'Goliath 120B', context_length: 6144, pricing: { prompt: 0.00938, completion: 0.00938 } },
     { id: 'undi95/toppy-m-7b', name: 'Toppy M 7B', context_length: 4096, pricing: { prompt: 0.00013, completion: 0.00013 } },
     { id: 'jondurbin/airoboros-l2-70b', name: 'Airoboros L2 70B', context_length: 4096, pricing: { prompt: 0.0007, completion: 0.0007 } },
     { id: 'phind/phind-codellama-34b', name: 'Phind CodeLlama 34B', context_length: 16384, pricing: { prompt: 0.0007, completion: 0.0007 } },
-    { id: 'wizardlm/wizardlm-70b', name: 'WizardLM 70B', context_length: 2048, pricing: { prompt: 0.00081, completion: 0.00081 } },
-    { id: 'huggingfaceh4/zephyr-7b-beta', name: 'Zephyr 7B Beta', context_length: 32768, pricing: { prompt: 0.00013, completion: 0.00013 } },
-    { id: 'togethercomputer/stripedhyena-nous-7b', name: 'StripedHyena Nous 7B', context_length: 32768, pricing: { prompt: 0.00013, completion: 0.00013 } },
-    { id: 'cognitivecomputations/dolphin-mixtral-8x7b', name: 'Dolphin Mixtral 8x7B', context_length: 32000, pricing: { prompt: 0.0005, completion: 0.0005 } },
-    { id: 'cognitivecomputations/dolphin-2.6-mixtral-8x7b', name: 'Dolphin 2.6 Mixtral 8x7B', context_length: 32000, pricing: { prompt: 0.0005, completion: 0.0005 } },
-    { id: 'neversleep/noromaid-mixtral-8x7b-instruct', name: 'Noromaid Mixtral 8x7B', context_length: 8000, pricing: { prompt: 0.008, completion: 0.008 } },
-    { id: 'alpindale/goliath-120b', name: 'Goliath 120B', context_length: 6144, pricing: { prompt: 0.00938, completion: 0.00938 } },
-    { id: 'lizpreciatior/lzlv-70b-fp16-hf', name: 'LZLV 70B', context_length: 4096, pricing: { prompt: 0.00059, completion: 0.00078 } },
+    
+    // Latest Experimental & Research Models
+    { id: 'deepseek/deepseek-r1-lite-preview', name: 'DeepSeek R1 Lite Preview', context_length: 64000, pricing: { prompt: 0.00014, completion: 0.00028 } },
+    { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (October 2024)', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
+    { id: 'openai/gpt-4o-2024-11-20', name: 'GPT-4o (November 2024)', context_length: 128000, pricing: { prompt: 0.0025, completion: 0.01 } },
   ];
 
   // Handle settings change with database persistence
