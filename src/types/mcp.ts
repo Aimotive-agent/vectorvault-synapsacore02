@@ -72,7 +72,12 @@ export interface ToolCall {
 export interface AISettings {
   openaiApiKey: string;
   openrouterApiKey: string;
-  provider: 'openai' | 'openrouter';
+  geminiApiKey: string;
+  anthropicApiKey: string;
+  deepseekApiKey: string;
+  perplexityApiKey: string;
+  grokApiKey: string;
+  provider: 'openai' | 'openrouter' | 'gemini' | 'anthropic' | 'deepseek' | 'perplexity' | 'grok';
   selectedModel: string;
   temperature: number;
   maxTokens: number;

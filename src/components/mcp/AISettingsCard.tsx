@@ -1,110 +1,94 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Settings, Key, Brain, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Check, X, AlertCircle, Eye, EyeOff, Settings } from 'lucide-react';
 import { AISettings, OpenAIModel, OpenRouterModel } from '@/types/mcp';
+import { useToast } from '@/hooks/use-toast';
 
 interface AISettingsCardProps {
   settings: AISettings;
   onSettingsChange: (settings: AISettings) => void;
-  onLog: (message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string) => void;
+  onLog: (message: string, type: 'info' | 'success' | 'warning' | 'error', icon: string, source?: string) => void;
 }
 
-// Match exactly with MCPWorkbench comprehensive lists
-const DEFAULT_OPENAI_MODELS = [
-  // GPT-4 Family
-  { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000, pricing: { input: 0.005, output: 0.015 } },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000, pricing: { input: 0.00015, output: 0.0006 } },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo Preview', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4-turbo-2024-04-09', name: 'GPT-4 Turbo (2024-04-09)', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4-0125-preview', name: 'GPT-4 0125 Preview', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4-1106-preview', name: 'GPT-4 1106 Preview', context_window: 128000, pricing: { input: 0.01, output: 0.03 } },
-  { id: 'gpt-4', name: 'GPT-4', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
-  { id: 'gpt-4-0613', name: 'GPT-4 (June 2023)', context_window: 8192, pricing: { input: 0.03, output: 0.06 } },
-  { id: 'gpt-4-32k', name: 'GPT-4 32K', context_window: 32768, pricing: { input: 0.06, output: 0.12 } },
-  { id: 'gpt-4-32k-0613', name: 'GPT-4 32K (June 2023)', context_window: 32768, pricing: { input: 0.06, output: 0.12 } },
-  
-  // GPT-3.5 Family
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
-  { id: 'gpt-3.5-turbo-16k', name: 'GPT-3.5 Turbo 16K', context_window: 16385, pricing: { input: 0.003, output: 0.004 } },
-  { id: 'gpt-3.5-turbo-1106', name: 'GPT-3.5 Turbo (Nov 2023)', context_window: 16385, pricing: { input: 0.001, output: 0.002 } },
-  { id: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo (Jan 2024)', context_window: 16385, pricing: { input: 0.0005, output: 0.0015 } },
-  { id: 'gpt-3.5-turbo-instruct', name: 'GPT-3.5 Turbo Instruct', context_window: 4096, pricing: { input: 0.0015, output: 0.002 } },
-  
-  // DALL-E Models
-  { id: 'dall-e-3', name: 'DALL-E 3', context_window: 4096, pricing: { input: 0.04, output: 0.08 } },
-  { id: 'dall-e-2', name: 'DALL-E 2', context_window: 4096, pricing: { input: 0.02, output: 0.02 } },
-  
-  // Text-to-Speech
-  { id: 'tts-1', name: 'TTS 1', context_window: 4096, pricing: { input: 0.015, output: 0.015 } },
-  { id: 'tts-1-hd', name: 'TTS 1 HD', context_window: 4096, pricing: { input: 0.03, output: 0.03 } },
-  
-  // Whisper
-  { id: 'whisper-1', name: 'Whisper 1', context_window: 25000000, pricing: { input: 0.006, output: 0.006 } },
-  
-  // Embeddings
-  { id: 'text-embedding-3-large', name: 'Text Embedding 3 Large', context_window: 8191, pricing: { input: 0.00013, output: 0.00013 } },
-  { id: 'text-embedding-3-small', name: 'Text Embedding 3 Small', context_window: 8191, pricing: { input: 0.00002, output: 0.00002 } },
-  { id: 'text-embedding-ada-002', name: 'Text Embedding Ada 002', context_window: 8191, pricing: { input: 0.0001, output: 0.0001 } },
+// Model definitions for each provider
+const DEFAULT_OPENAI_MODELS: OpenAIModel[] = [
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', context_window: 128000, pricing: { input: 0.15, output: 0.6 } },
+  { id: 'gpt-4o', name: 'GPT-4o', context_window: 128000, pricing: { input: 5, output: 15 } },
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', context_window: 128000, pricing: { input: 10, output: 30 } },
+  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', context_window: 16385, pricing: { input: 0.5, output: 1.5 } },
 ];
 
-// Comprehensive OpenRouter model list (100+ models) - exactly matching MCPWorkbench
-const DEFAULT_OPENROUTER_MODELS = [
-  // [First batch of models - truncated for readability]
-  { id: 'openai/gpt-4o', name: 'GPT-4o (OpenRouter)', context_length: 128000, pricing: { prompt: 0.005, completion: 0.015 } },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', context_length: 128000, pricing: { prompt: 0.00015, completion: 0.0006 } },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000, pricing: { prompt: 0.003, completion: 0.015 } },
-  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', context_length: 200000, pricing: { prompt: 0.015, completion: 0.075 } },
-  { id: 'google/gemini-pro', name: 'Gemini Pro', context_length: 32768, pricing: { prompt: 0.0005, completion: 0.0015 } },
-  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B Instruct', context_length: 128000, pricing: { prompt: 0.005, completion: 0.005 } },
-  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B Instruct', context_length: 128000, pricing: { prompt: 0.00088, completion: 0.00088 } },
-  { id: 'mistralai/mistral-large', name: 'Mistral Large', context_length: 128000, pricing: { prompt: 0.008, completion: 0.024 } },
-  { id: 'moonshotai/kimi-k2:free', name: 'Moonshot Kimi K2 (Free)', context_length: 128000, pricing: { prompt: 0, completion: 0 } },
-  // ... [Additional 80+ models would go here - using abbreviated list for readability]
+const DEFAULT_OPENROUTER_MODELS: OpenRouterModel[] = [
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', context_length: 128000, pricing: { prompt: 0.15, completion: 0.6 } },
+  { id: 'openai/gpt-4o', name: 'GPT-4o', context_length: 128000, pricing: { prompt: 5, completion: 15 } },
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 200000, pricing: { prompt: 3, completion: 15 } },
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', context_length: 131072, pricing: { prompt: 2.7, completion: 2.7 } },
+];
+
+const GEMINI_MODELS = [
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', context_length: 2097152 },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', context_length: 1048576 },
+  { id: 'gemini-pro', name: 'Gemini Pro', context_length: 32768 },
+];
+
+const ANTHROPIC_MODELS = [
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', context_length: 200000 },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', context_length: 200000 },
+  { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', context_length: 200000 },
+];
+
+const DEEPSEEK_MODELS = [
+  { id: 'deepseek-chat', name: 'DeepSeek Chat', context_length: 32768 },
+  { id: 'deepseek-coder', name: 'DeepSeek Coder', context_length: 16384 },
+];
+
+const PERPLEXITY_MODELS = [
+  { id: 'llama-3.1-sonar-small-128k-online', name: 'Llama 3.1 Sonar Small (Online)', context_length: 127072 },
+  { id: 'llama-3.1-sonar-large-128k-online', name: 'Llama 3.1 Sonar Large (Online)', context_length: 127072 },
+  { id: 'llama-3.1-sonar-huge-128k-online', name: 'Llama 3.1 Sonar Huge (Online)', context_length: 127072 },
+];
+
+const GROK_MODELS = [
+  { id: 'grok-beta', name: 'Grok Beta', context_length: 131072 },
+  { id: 'grok-vision-beta', name: 'Grok Vision Beta', context_length: 8192 },
 ];
 
 export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettingsCardProps) => {
-  const [availableModels, setAvailableModels] = useState<OpenAIModel[]>(DEFAULT_OPENAI_MODELS);
+  const [openaiModels, setOpenaiModels] = useState<OpenAIModel[]>(DEFAULT_OPENAI_MODELS);
   const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>(DEFAULT_OPENROUTER_MODELS);
-  const [isTestingOpenAI, setIsTestingOpenAI] = useState(false);
-  const [isTestingOpenRouter, setIsTestingOpenRouter] = useState(false);
-  const [openaiKeyStatus, setOpenaiKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
-  const [openrouterKeyStatus, setOpenrouterKeyStatus] = useState<'untested' | 'valid' | 'invalid'>('untested');
+  const [apiKeyStatuses, setApiKeyStatuses] = useState<Record<string, 'valid' | 'invalid' | 'testing' | null>>({
+    openai: null,
+    openrouter: null,
+    gemini: null,
+    anthropic: null,
+    deepseek: null,
+    perplexity: null,
+    grok: null,
+  });
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({
+    openai: false,
+    openrouter: false,
+    gemini: false,
+    anthropic: false,
+    deepseek: false,
+    perplexity: false,
+    grok: false,
+  });
   const { toast } = useToast();
 
-
-  // Effect to save settings when they change
-  useEffect(() => {
-    // Auto-save settings when they change
-    const saveTimeout = setTimeout(() => {
-      // This will trigger the parent to save the settings
-    }, 500);
+  const testOpenAIKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
     
-    return () => clearTimeout(saveTimeout);
-  }, [settings]);
-
-  const testOpenAIKey = async (apiKey: string) => {
-    if (!apiKey?.trim()) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    setIsTestingOpenAI(true);
-    onLog('🔑 Testing OpenAI API key and fetching all available models...', 'info', '🔑');
-
+    setApiKeyStatuses(prev => ({ ...prev, openai: 'testing' }));
+    
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
         headers: {
@@ -115,385 +99,339 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
 
       if (response.ok) {
         const data = await response.json();
-        // Get ALL models from the API, not just GPT models
-        const allModels = data.data.map((model: any) => ({
-          id: model.id,
-          name: model.id.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-          context_window: getContextWindow(model.id),
-          pricing: getPricing(model.id),
-          created: model.created,
-          owned_by: model.owned_by
-        }));
-
-        // Sort models by name for better UX
-        allModels.sort((a: any, b: any) => a.name.localeCompare(b.name));
-
-        setAvailableModels(allModels);
-        setOpenaiKeyStatus('valid');
-        onLog(`✅ OpenAI API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
-        toast({
-          title: "API Key Valid",
-          description: `Connected successfully! Found ${allModels.length} available models`,
-        });
+        const models = data.data
+          .filter((model: any) => model.id.includes('gpt'))
+          .map((model: any) => ({
+            id: model.id,
+            name: model.id.toUpperCase(),
+            context_window: model.context_window || 4096,
+          }));
+        
+        if (models.length > 0) {
+          setOpenaiModels([...DEFAULT_OPENAI_MODELS, ...models.filter((m: any) => 
+            !DEFAULT_OPENAI_MODELS.find(dm => dm.id === m.id)
+          )]);
+        }
+        
+        setApiKeyStatuses(prev => ({ ...prev, openai: 'valid' }));
+        onLog('OpenAI API key validated successfully', 'success', '✅');
         return true;
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        setApiKeyStatuses(prev => ({ ...prev, openai: 'invalid' }));
+        onLog('Invalid OpenAI API key', 'error', '❌');
+        return false;
       }
     } catch (error) {
-      setOpenaiKeyStatus('invalid');
-      onLog(`❌ OpenAI API key validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌');
-      toast({
-        title: "Invalid API Key",
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
-      });
+      setApiKeyStatuses(prev => ({ ...prev, openai: 'invalid' }));
+      onLog('Failed to validate OpenAI API key', 'error', '❌');
       return false;
-    } finally {
-      setIsTestingOpenAI(false);
     }
   };
 
-  const testOpenRouterKey = async (apiKey: string) => {
-    if (!apiKey?.trim()) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenRouter API key",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    setIsTestingOpenRouter(true);
-    onLog('🔑 Testing OpenRouter API key and fetching all available models...', 'info', '🔑');
-
+  const testApiKey = async (provider: string, apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, [provider]: 'testing' }));
+    
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Get ALL models from OpenRouter API - they have hundreds
-        const allModels: OpenRouterModel[] = data.data.map((model: any) => ({
-          id: model.id,
-          name: model.name || model.id,
-          context_length: model.context_length || 4096,
-          pricing: model.pricing ? {
-            prompt: parseFloat(model.pricing.prompt) || 0,
-            completion: parseFloat(model.pricing.completion) || 0
-          } : { prompt: 0, completion: 0 },
-          description: model.description,
-          architecture: model.architecture,
-          per_request_limits: model.per_request_limits
-        }));
-
-        // Sort models by name for better UX
-        allModels.sort((a, b) => a.name.localeCompare(b.name));
-
-        setOpenrouterModels(allModels);
-        setOpenrouterKeyStatus('valid');
-        onLog(`✅ OpenRouter API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
-        toast({
-          title: "API Key Valid", 
-          description: `Connected successfully! Found ${allModels.length} available models`,
-        });
-        return true;
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let isValid = false;
+      
+      // Simple validation - just check if key has reasonable format
+      switch (provider) {
+        case 'openrouter':
+          isValid = apiKey.startsWith('sk-or-') && apiKey.length > 20;
+          break;
+        case 'gemini':
+          isValid = apiKey.length > 20; // Google API keys are typically long
+          break;
+        case 'anthropic':
+          isValid = apiKey.startsWith('sk-ant-') && apiKey.length > 20;
+          break;
+        case 'deepseek':
+          isValid = apiKey.startsWith('sk-') && apiKey.length > 20;
+          break;
+        case 'perplexity':
+          isValid = apiKey.startsWith('pplx-') && apiKey.length > 20;
+          break;
+        case 'grok':
+          isValid = apiKey.length > 20; // X.AI API keys
+          break;
+        default:
+          isValid = apiKey.length > 10;
       }
+      
+      setApiKeyStatuses(prev => ({ ...prev, [provider]: isValid ? 'valid' : 'invalid' }));
+      onLog(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key ${isValid ? 'validated' : 'invalid'}`, isValid ? 'success' : 'error', isValid ? '✅' : '❌');
+      return isValid;
     } catch (error) {
-      setOpenrouterKeyStatus('invalid');
-      onLog(`❌ OpenRouter API key validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', '❌');
-      toast({
-        title: "Invalid API Key",
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
-      });
+      setApiKeyStatuses(prev => ({ ...prev, [provider]: 'invalid' }));
+      onLog(`Failed to validate ${provider} API key`, 'error', '❌');
       return false;
-    } finally {
-      setIsTestingOpenRouter(false);
     }
   };
 
-  const getContextWindow = (modelId: string): number => {
-    if (modelId.includes('gpt-4o')) return 128000;
-    if (modelId.includes('gpt-4-turbo')) return 128000;
-    if (modelId.includes('gpt-4')) return 8192;
-    if (modelId.includes('gpt-3.5')) return 16385;
-    return 4096;
+  const handleApiKeyChange = (provider: string, apiKey: string) => {
+    const newSettings = { ...settings };
+    switch (provider) {
+      case 'openai':
+        newSettings.openaiApiKey = apiKey;
+        break;
+      case 'openrouter':
+        newSettings.openrouterApiKey = apiKey;
+        break;
+      case 'gemini':
+        newSettings.geminiApiKey = apiKey;
+        break;
+      case 'anthropic':
+        newSettings.anthropicApiKey = apiKey;
+        break;
+      case 'deepseek':
+        newSettings.deepseekApiKey = apiKey;
+        break;
+      case 'perplexity':
+        newSettings.perplexityApiKey = apiKey;
+        break;
+      case 'grok':
+        newSettings.grokApiKey = apiKey;
+        break;
+    }
+    onSettingsChange(newSettings);
+    // Reset status when key changes
+    setApiKeyStatuses(prev => ({ ...prev, [provider]: null }));
   };
 
-  const getPricing = (modelId: string) => {
-    const pricingMap: Record<string, { input: number; output: number }> = {
-      'gpt-4o': { input: 0.005, output: 0.015 },
-      'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
-      'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
-      'gpt-4': { input: 0.03, output: 0.06 },
-      'gpt-3.5-turbo': { input: 0.001, output: 0.002 },
-    };
-    return pricingMap[modelId] || { input: 0, output: 0 };
-  };
+  const handleConnect = async (provider: string) => {
+    const apiKey = getApiKey(provider);
+    if (!apiKey) return;
 
-  const handleOpenAIApiKeyChange = (apiKey: string) => {
-    const updatedSettings = { ...settings, openaiApiKey: apiKey };
-    onSettingsChange(updatedSettings);
-    setOpenaiKeyStatus('untested');
-  };
+    let isValid = false;
+    if (provider === 'openai') {
+      isValid = await testOpenAIKey(apiKey);
+    } else {
+      isValid = await testApiKey(provider, apiKey);
+    }
 
-  const handleOpenRouterApiKeyChange = (apiKey: string) => {
-    const updatedSettings = { ...settings, openrouterApiKey: apiKey };
-    onSettingsChange(updatedSettings);
-    setOpenrouterKeyStatus('untested');
-  };
-
-  const handleModelChange = (modelId: string) => {
-    const updatedSettings = { ...settings, selectedModel: modelId };
-    onSettingsChange(updatedSettings);
-  };
-
-  const handleProviderChange = (provider: 'openai' | 'openrouter') => {
-    const updatedSettings = { ...settings, provider };
-    onSettingsChange(updatedSettings);
-  };
-
-  const handleConnectOpenAI = async () => {
-    if (await testOpenAIKey(settings.openaiApiKey)) {
-      // Auto-save settings on successful connection
-      await onSettingsChange(settings);
+    if (isValid) {
+      const newSettings = { ...settings, provider: provider as AISettings['provider'] };
+      onSettingsChange(newSettings);
+      toast({
+        title: "Connected!",
+        description: `Successfully connected to ${provider.charAt(0).toUpperCase() + provider.slice(1)}`,
+      });
     }
   };
 
-  const handleConnectOpenRouter = async () => {
-    if (await testOpenRouterKey(settings.openrouterApiKey)) {
-      // Auto-save settings on successful connection
-      await onSettingsChange(settings);
+  const getApiKey = (provider: string): string => {
+    switch (provider) {
+      case 'openai': return settings.openaiApiKey;
+      case 'openrouter': return settings.openrouterApiKey;
+      case 'gemini': return settings.geminiApiKey;
+      case 'anthropic': return settings.anthropicApiKey;
+      case 'deepseek': return settings.deepseekApiKey;
+      case 'perplexity': return settings.perplexityApiKey;
+      case 'grok': return settings.grokApiKey;
+      default: return '';
     }
   };
 
-  const getKeyStatusIcon = (status: 'untested' | 'valid' | 'invalid') => {
-    switch (status) {
-      case 'valid': return <CheckCircle className="h-4 w-4 text-success" />;
-      case 'invalid': return <AlertCircle className="h-4 w-4 text-destructive" />;
-      default: return <Key className="h-4 w-4 text-muted-foreground" />;
+  const getModelsForProvider = (provider: string) => {
+    switch (provider) {
+      case 'openai': return openaiModels;
+      case 'openrouter': return openrouterModels;
+      case 'gemini': return GEMINI_MODELS;
+      case 'anthropic': return ANTHROPIC_MODELS;
+      case 'deepseek': return DEEPSEEK_MODELS;
+      case 'perplexity': return PERPLEXITY_MODELS;
+      case 'grok': return GROK_MODELS;
+      default: return [];
     }
   };
 
-  const getCurrentModels = () => {
-    // Return the actual fetched models, not the default static lists
-    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
+  const toggleKeyVisibility = (provider: string) => {
+    setShowKeys(prev => ({ ...prev, [provider]: !prev[provider] }));
   };
 
-  const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);
+  const renderProviderTab = (provider: string, displayName: string) => {
+    const apiKey = getApiKey(provider);
+    const status = apiKeyStatuses[provider];
+    const models = getModelsForProvider(provider);
+    const isSelected = settings.provider === provider;
+
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor={`${provider}-key`}>API Key</Label>
+          <div className="relative">
+            <Input
+              id={`${provider}-key`}
+              type={showKeys[provider] ? "text" : "password"}
+              value={apiKey}
+              onChange={(e) => handleApiKeyChange(provider, e.target.value)}
+              placeholder={`Enter your ${displayName} API key`}
+              className="pr-20"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleKeyVisibility(provider)}
+                className="h-6 w-6 p-0"
+              >
+                {showKeys[provider] ? <EyeOff size={14} /> : <Eye size={14} />}
+              </Button>
+              {status === 'testing' && <Loader2 className="h-4 w-4 animate-spin" />}
+              {status === 'valid' && <Check className="h-4 w-4 text-green-500" />}
+              {status === 'invalid' && <X className="h-4 w-4 text-red-500" />}
+            </div>
+          </div>
+        </div>
+
+        <Button 
+          onClick={() => handleConnect(provider)}
+          disabled={!apiKey || status === 'testing'}
+          className="w-full"
+          variant={isSelected ? "default" : "outline"}
+        >
+          {status === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isSelected ? `Connected to ${displayName}` : `Connect to ${displayName}`}
+        </Button>
+
+        {status === 'valid' && models.length > 0 && (
+          <div className="space-y-2">
+            <Label>Available Models</Label>
+            <div className="grid gap-2 max-h-32 overflow-y-auto">
+              {models.map((model) => (
+                <div key={model.id} className="flex items-center justify-between p-2 border rounded">
+                  <span className="text-sm font-medium">{model.name}</span>
+                  <Badge variant="outline">
+                    {('context_window' in model ? model.context_window : model.context_length)?.toLocaleString()} tokens
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Card className="bg-gradient-surface border shadow-soft">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />
-          AI Configuration
+          AI Provider Settings
+          {settings.provider && (
+            <Badge variant="default">
+              {settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1)}
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          Configure your AI provider and model preferences for AI agent interactions
+          Configure your AI provider API keys and model settings
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Provider Selection */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">AI Provider</Label>
-          <Tabs value={settings.provider} onValueChange={handleProviderChange}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="openai">OpenAI</TabsTrigger>
-              <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="openai" className="space-y-4 mt-4">
-              {/* OpenAI API Key */}
-              <div className="space-y-3">
-                <Label htmlFor="openaiApiKey" className="text-sm font-medium">OpenAI API Key</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="openaiApiKey"
-                      type="password"
-                      placeholder="sk-..."
-                      value={settings.openaiApiKey}
-                      onChange={(e) => handleOpenAIApiKeyChange(e.target.value)}
-                      className="pr-10"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {getKeyStatusIcon(openaiKeyStatus)}
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleConnectOpenAI}
-                    disabled={isTestingOpenAI || !settings.openaiApiKey?.trim()}
-                    variant={openaiKeyStatus === 'valid' ? 'default' : 'outline'}
-                    size="sm"
-                    className="min-w-[90px]"
-                  >
-                    {isTestingOpenAI ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : openaiKeyStatus === 'valid' ? (
-                      'Connected'
-                    ) : (
-                      'Connect'
-                    )}
-                  </Button>
-                </div>
-                {openaiKeyStatus === 'valid' && (
-                  <Badge variant="outline" className="text-success border-success/50">
-                    ✓ API Key Valid
-                  </Badge>
-                )}
-              </div>
-            </TabsContent>
+        <Tabs value={settings.provider || "openai"} onValueChange={(value) => onSettingsChange({ ...settings, provider: value as AISettings['provider'] })} className="w-full">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="openai">OpenAI</TabsTrigger>
+            <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
+            <TabsTrigger value="gemini">Gemini</TabsTrigger>
+            <TabsTrigger value="anthropic">Anthropic</TabsTrigger>
+            <TabsTrigger value="deepseek">DeepSeek</TabsTrigger>
+            <TabsTrigger value="perplexity">Perplexity</TabsTrigger>
+            <TabsTrigger value="grok">Grok</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="openrouter" className="space-y-4 mt-4">
-              {/* OpenRouter API Key */}
-              <div className="space-y-3">
-                <Label htmlFor="openrouterApiKey" className="text-sm font-medium">OpenRouter API Key</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id="openrouterApiKey"
-                      type="password"
-                      placeholder="sk-or-..."
-                      value={settings.openrouterApiKey}
-                      onChange={(e) => handleOpenRouterApiKeyChange(e.target.value)}
-                      className="pr-10"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {getKeyStatusIcon(openrouterKeyStatus)}
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleConnectOpenRouter}
-                    disabled={isTestingOpenRouter || !settings.openrouterApiKey?.trim()}
-                    variant={openrouterKeyStatus === 'valid' ? 'default' : 'outline'}
-                    size="sm"
-                    className="min-w-[90px]"
-                  >
-                    {isTestingOpenRouter ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : openrouterKeyStatus === 'valid' ? (
-                      'Connected'
-                    ) : (
-                      'Connect'
-                    )}
-                  </Button>
-                </div>
-                {openrouterKeyStatus === 'valid' && (
-                  <Badge variant="outline" className="text-success border-success/50">
-                    ✓ API Key Valid
-                  </Badge>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="openai">
+            {renderProviderTab('openai', 'OpenAI')}
+          </TabsContent>
 
-        {/* Model Selection */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Model Selection
-          </Label>
-          <Select 
-            value={settings.selectedModel || ''} 
-            onValueChange={handleModelChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              {getCurrentModels().map((model: any) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{model.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {(model.context_window || model.context_length)?.toLocaleString()} tokens
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-           {selectedModel && (
-            <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1">
-              <div className="flex justify-between">
-                <span>Context Window:</span>
-                <span className="font-medium">{((selectedModel as any).context_window || (selectedModel as any).context_length)?.toLocaleString()} tokens</span>
-              </div>
-              {(selectedModel as any).pricing && (
-                <>
-                  <div className="flex justify-between">
-                    <span>Input Price:</span>
-                    <span className="font-medium">
-                      ${settings.provider === 'openrouter' 
-                        ? (selectedModel as any).pricing.prompt 
-                        : (selectedModel as any).pricing.input}/1K tokens
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Output Price:</span>
-                    <span className="font-medium">
-                      ${settings.provider === 'openrouter' 
-                        ? (selectedModel as any).pricing.completion 
-                        : (selectedModel as any).pricing.output}/1K tokens
-                    </span>
-                  </div>
-                </>
-              )}
+          <TabsContent value="openrouter">
+            {renderProviderTab('openrouter', 'OpenRouter')}
+          </TabsContent>
+
+          <TabsContent value="gemini">
+            {renderProviderTab('gemini', 'Google Gemini')}
+          </TabsContent>
+
+          <TabsContent value="anthropic">
+            {renderProviderTab('anthropic', 'Anthropic')}
+          </TabsContent>
+
+          <TabsContent value="deepseek">
+            {renderProviderTab('deepseek', 'DeepSeek')}
+          </TabsContent>
+
+          <TabsContent value="perplexity">
+            {renderProviderTab('perplexity', 'Perplexity')}
+          </TabsContent>
+
+          <TabsContent value="grok">
+            {renderProviderTab('grok', 'Grok (X.AI)')}
+          </TabsContent>
+        </Tabs>
+
+        {settings.provider && (
+          <div className="space-y-4 border-t pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="model-select">Model</Label>
+              <Select value={settings.selectedModel} onValueChange={(value) => onSettingsChange({ ...settings, selectedModel: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getModelsForProvider(settings.provider).map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div className="flex flex-col">
+                        <span>{model.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {('context_window' in model ? model.context_window : model.context_length)?.toLocaleString()} tokens
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
 
-        {/* Temperature */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Temperature: {settings.temperature}</Label>
-          <Slider
-            value={[settings.temperature]}
-            onValueChange={([value]) => onSettingsChange({ ...settings, temperature: value })}
-            max={2}
-            min={0}
-            step={0.1}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Focused</span>
-            <span>Balanced</span>
-            <span>Creative</span>
+            <div className="space-y-2">
+              <Label>Temperature: {settings.temperature}</Label>
+              <Slider
+                value={[settings.temperature]}
+                onValueChange={([value]) => onSettingsChange({ ...settings, temperature: value })}
+                max={2}
+                min={0}
+                step={0.1}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Max Tokens: {settings.maxTokens}</Label>
+              <Slider
+                value={[settings.maxTokens]}
+                onValueChange={([value]) => onSettingsChange({ ...settings, maxTokens: value })}
+                max={4000}
+                min={100}
+                step={100}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="system-prompt">System Prompt</Label>
+              <Textarea
+                id="system-prompt"
+                value={settings.systemPrompt}
+                onChange={(e) => onSettingsChange({ ...settings, systemPrompt: e.target.value })}
+                placeholder="Enter system prompt..."
+                rows={4}
+              />
+            </div>
           </div>
-        </div>
-
-        {/* Max Tokens */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Max Tokens: {settings.maxTokens}</Label>
-          <Slider
-            value={[settings.maxTokens]}
-            onValueChange={([value]) => onSettingsChange({ ...settings, maxTokens: value })}
-            max={4000}
-            min={100}
-            step={100}
-            className="w-full"
-          />
-        </div>
-
-        {/* System Prompt */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">System Prompt</Label>
-          <Textarea
-            placeholder="You are a helpful AI assistant with access to MCP tools..."
-            value={settings.systemPrompt}
-            onChange={(e) => onSettingsChange({ ...settings, systemPrompt: e.target.value })}
-            rows={4}
-            className="resize-none"
-          />
-        </div>
+        )}
       </CardContent>
     </Card>
   );

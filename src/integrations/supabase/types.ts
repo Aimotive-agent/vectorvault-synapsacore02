@@ -87,11 +87,16 @@ export type Database = {
       }
       ai_settings: {
         Row: {
+          anthropic_api_key: string | null
           created_at: string
+          deepseek_api_key: string | null
+          gemini_api_key: string | null
+          grok_api_key: string | null
           id: string
           max_tokens: number | null
           openai_api_key: string | null
           openrouter_api_key: string | null
+          perplexity_api_key: string | null
           provider: string
           selected_model: string
           system_prompt: string | null
@@ -100,11 +105,16 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          anthropic_api_key?: string | null
           created_at?: string
+          deepseek_api_key?: string | null
+          gemini_api_key?: string | null
+          grok_api_key?: string | null
           id?: string
           max_tokens?: number | null
           openai_api_key?: string | null
           openrouter_api_key?: string | null
+          perplexity_api_key?: string | null
           provider?: string
           selected_model?: string
           system_prompt?: string | null
@@ -113,11 +123,16 @@ export type Database = {
           user_id: string
         }
         Update: {
+          anthropic_api_key?: string | null
           created_at?: string
+          deepseek_api_key?: string | null
+          gemini_api_key?: string | null
+          grok_api_key?: string | null
           id?: string
           max_tokens?: number | null
           openai_api_key?: string | null
           openrouter_api_key?: string | null
+          perplexity_api_key?: string | null
           provider?: string
           selected_model?: string
           system_prompt?: string | null
