@@ -464,7 +464,7 @@ export const MCPWorkbench = () => {
       const discoveredTools = await discoverTools(url);
       
       const newServer: MCPServer = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name,
         url,
         status: 'connected',
