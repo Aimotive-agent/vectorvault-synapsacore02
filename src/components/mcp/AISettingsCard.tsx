@@ -64,6 +64,11 @@ const GROK_MODELS = [
 export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettingsCardProps) => {
   const [openaiModels, setOpenaiModels] = useState<OpenAIModel[]>(DEFAULT_OPENAI_MODELS);
   const [openrouterModels, setOpenrouterModels] = useState<OpenRouterModel[]>(DEFAULT_OPENROUTER_MODELS);
+  const [geminiModels, setGeminiModels] = useState(GEMINI_MODELS);
+  const [anthropicModels, setAnthropicModels] = useState(ANTHROPIC_MODELS);
+  const [deepseekModels, setDeepseekModels] = useState(DEEPSEEK_MODELS);
+  const [perplexityModels, setPerplexityModels] = useState(PERPLEXITY_MODELS);
+  const [grokModels, setGrokModels] = useState(GROK_MODELS);
   const [apiKeyStatuses, setApiKeyStatuses] = useState<Record<string, 'valid' | 'invalid' | 'testing' | null>>({
     openai: null,
     openrouter: null,
@@ -88,6 +93,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     if (!apiKey.trim()) return false;
     
     setApiKeyStatuses(prev => ({ ...prev, openai: 'testing' }));
+    onLog('🔑 Testing OpenAI API key and fetching all available models...', 'info', '🔑');
     
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
@@ -99,22 +105,22 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
 
       if (response.ok) {
         const data = await response.json();
-        const models = data.data
-          .filter((model: any) => model.id.includes('gpt'))
-          .map((model: any) => ({
-            id: model.id,
-            name: model.id.toUpperCase(),
-            context_window: model.context_window || 4096,
-          }));
-        
-        if (models.length > 0) {
-          setOpenaiModels([...DEFAULT_OPENAI_MODELS, ...models.filter((m: any) => 
-            !DEFAULT_OPENAI_MODELS.find(dm => dm.id === m.id)
-          )]);
-        }
-        
+        // Get ALL models from the API
+        const allModels = data.data.map((model: any) => ({
+          id: model.id,
+          name: model.id.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          context_window: getContextWindow(model.id),
+          pricing: getPricing(model.id),
+          created: model.created,
+          owned_by: model.owned_by
+        }));
+
+        // Sort models by name for better UX
+        allModels.sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        setOpenaiModels(allModels);
         setApiKeyStatuses(prev => ({ ...prev, openai: 'valid' }));
-        onLog('OpenAI API key validated successfully', 'success', '✅');
+        onLog(`✅ OpenAI API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
         return true;
       } else {
         setApiKeyStatuses(prev => ({ ...prev, openai: 'invalid' }));
@@ -128,44 +134,273 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     }
   };
 
-  const testApiKey = async (provider: string, apiKey: string): Promise<boolean> => {
+  const getContextWindow = (modelId: string): number => {
+    if (modelId.includes('gpt-4o')) return 128000;
+    if (modelId.includes('gpt-4-turbo')) return 128000;
+    if (modelId.includes('gpt-4')) return 8192;
+    if (modelId.includes('gpt-3.5')) return 16385;
+    return 4096;
+  };
+
+  const getPricing = (modelId: string) => {
+    const pricingMap: Record<string, { input: number; output: number }> = {
+      'gpt-4o': { input: 0.005, output: 0.015 },
+      'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+      'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
+      'gpt-4': { input: 0.03, output: 0.06 },
+      'gpt-3.5-turbo': { input: 0.001, output: 0.002 },
+    };
+    return pricingMap[modelId] || { input: 0, output: 0 };
+  };
+
+  const testOpenRouterKey = async (apiKey: string): Promise<boolean> => {
     if (!apiKey.trim()) return false;
     
-    setApiKeyStatuses(prev => ({ ...prev, [provider]: 'testing' }));
+    setApiKeyStatuses(prev => ({ ...prev, openrouter: 'testing' }));
+    onLog('🔑 Testing OpenRouter API key and fetching all available models...', 'info', '🔑');
     
     try {
-      let isValid = false;
-      
-      // Simple validation - just check if key has reasonable format
-      switch (provider) {
-        case 'openrouter':
-          isValid = apiKey.startsWith('sk-or-') && apiKey.length > 20;
-          break;
-        case 'gemini':
-          isValid = apiKey.length > 20; // Google API keys are typically long
-          break;
-        case 'anthropic':
-          isValid = apiKey.startsWith('sk-ant-') && apiKey.length > 20;
-          break;
-        case 'deepseek':
-          isValid = apiKey.startsWith('sk-') && apiKey.length > 20;
-          break;
-        case 'perplexity':
-          isValid = apiKey.startsWith('pplx-') && apiKey.length > 20;
-          break;
-        case 'grok':
-          isValid = apiKey.length > 20; // X.AI API keys
-          break;
-        default:
-          isValid = apiKey.length > 10;
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const allModels: OpenRouterModel[] = data.data.map((model: any) => ({
+          id: model.id,
+          name: model.name || model.id,
+          context_length: model.context_length || 4096,
+          pricing: model.pricing ? {
+            prompt: parseFloat(model.pricing.prompt) || 0,
+            completion: parseFloat(model.pricing.completion) || 0
+          } : { prompt: 0, completion: 0 },
+          description: model.description,
+        }));
+
+        allModels.sort((a, b) => a.name.localeCompare(b.name));
+        setOpenrouterModels(allModels);
+        setApiKeyStatuses(prev => ({ ...prev, openrouter: 'valid' }));
+        onLog(`✅ OpenRouter API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, openrouter: 'invalid' }));
+        onLog('Invalid OpenRouter API key', 'error', '❌');
+        return false;
       }
-      
-      setApiKeyStatuses(prev => ({ ...prev, [provider]: isValid ? 'valid' : 'invalid' }));
-      onLog(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key ${isValid ? 'validated' : 'invalid'}`, isValid ? 'success' : 'error', isValid ? '✅' : '❌');
-      return isValid;
     } catch (error) {
-      setApiKeyStatuses(prev => ({ ...prev, [provider]: 'invalid' }));
-      onLog(`Failed to validate ${provider} API key`, 'error', '❌');
+      setApiKeyStatuses(prev => ({ ...prev, openrouter: 'invalid' }));
+      onLog('Failed to validate OpenRouter API key', 'error', '❌');
+      return false;
+    }
+  };
+
+  const testGeminiKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, gemini: 'testing' }));
+    onLog('🔑 Testing Google Gemini API key and fetching models...', 'info', '🔑');
+    
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        const models = data.models?.filter((model: any) => 
+          model.name.includes('gemini') && model.supportedGenerationMethods?.includes('generateContent')
+        ).map((model: any) => ({
+          id: model.name.replace('models/', ''),
+          name: model.displayName || model.name.replace('models/', ''),
+          context_length: model.inputTokenLimit || 32768,
+        })) || GEMINI_MODELS;
+
+        setGeminiModels(models.length > 0 ? models : GEMINI_MODELS);
+        setApiKeyStatuses(prev => ({ ...prev, gemini: 'valid' }));
+        onLog(`✅ Google Gemini API key validated successfully - Found ${models.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, gemini: 'invalid' }));
+        onLog('Invalid Google Gemini API key', 'error', '❌');
+        return false;
+      }
+    } catch (error) {
+      setApiKeyStatuses(prev => ({ ...prev, gemini: 'invalid' }));
+      onLog('Failed to validate Google Gemini API key', 'error', '❌');
+      return false;
+    }
+  };
+
+  const testAnthropicKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, anthropic: 'testing' }));
+    onLog('🔑 Testing Anthropic API key...', 'info', '🔑');
+    
+    try {
+      // Anthropic doesn't have a models endpoint, so we'll do a simple validation
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'test' }]
+        })
+      });
+
+      if (response.status === 200 || response.status === 400) { // 400 is also valid as it means auth worked
+        const enhancedModels = [
+          { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', context_length: 200000 },
+          { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', context_length: 200000 },
+          { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', context_length: 200000 },
+          { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', context_length: 200000 },
+        ];
+        
+        setAnthropicModels(enhancedModels);
+        setApiKeyStatuses(prev => ({ ...prev, anthropic: 'valid' }));
+        onLog(`✅ Anthropic API key validated successfully - Found ${enhancedModels.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, anthropic: 'invalid' }));
+        onLog('Invalid Anthropic API key', 'error', '❌');
+        return false;
+      }
+    } catch (error) {
+      setApiKeyStatuses(prev => ({ ...prev, anthropic: 'invalid' }));
+      onLog('Failed to validate Anthropic API key', 'error', '❌');
+      return false;
+    }
+  };
+
+  const testDeepSeekKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, deepseek: 'testing' }));
+    onLog('🔑 Testing DeepSeek API key and fetching models...', 'info', '🔑');
+    
+    try {
+      const response = await fetch('https://api.deepseek.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const models = data.data?.map((model: any) => ({
+          id: model.id,
+          name: model.id.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          context_length: model.context_length || 32768,
+        })) || DEEPSEEK_MODELS;
+
+        setDeepseekModels(models.length > 0 ? models : DEEPSEEK_MODELS);
+        setApiKeyStatuses(prev => ({ ...prev, deepseek: 'valid' }));
+        onLog(`✅ DeepSeek API key validated successfully - Found ${models.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, deepseek: 'invalid' }));
+        onLog('Invalid DeepSeek API key', 'error', '❌');
+        return false;
+      }
+    } catch (error) {
+      setApiKeyStatuses(prev => ({ ...prev, deepseek: 'invalid' }));
+      onLog('Failed to validate DeepSeek API key', 'error', '❌');
+      return false;
+    }
+  };
+
+  const testPerplexityKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, perplexity: 'testing' }));
+    onLog('🔑 Testing Perplexity API key...', 'info', '🔑');
+    
+    try {
+      // Perplexity doesn't have a models endpoint, but we can validate with a simple request
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-sonar-small-128k-online',
+          messages: [{ role: 'user', content: 'test' }],
+          max_tokens: 1
+        })
+      });
+
+      if (response.status === 200 || response.status === 400) {
+        const enhancedModels = [
+          { id: 'llama-3.1-sonar-small-128k-online', name: 'Llama 3.1 Sonar Small (Online)', context_length: 127072 },
+          { id: 'llama-3.1-sonar-large-128k-online', name: 'Llama 3.1 Sonar Large (Online)', context_length: 127072 },
+          { id: 'llama-3.1-sonar-huge-128k-online', name: 'Llama 3.1 Sonar Huge (Online)', context_length: 127072 },
+          { id: 'llama-3.1-8b-instruct', name: 'Llama 3.1 8B Instruct', context_length: 131072 },
+          { id: 'llama-3.1-70b-instruct', name: 'Llama 3.1 70B Instruct', context_length: 131072 },
+        ];
+        
+        setPerplexityModels(enhancedModels);
+        setApiKeyStatuses(prev => ({ ...prev, perplexity: 'valid' }));
+        onLog(`✅ Perplexity API key validated successfully - Found ${enhancedModels.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, perplexity: 'invalid' }));
+        onLog('Invalid Perplexity API key', 'error', '❌');
+        return false;
+      }
+    } catch (error) {
+      setApiKeyStatuses(prev => ({ ...prev, perplexity: 'invalid' }));
+      onLog('Failed to validate Perplexity API key', 'error', '❌');
+      return false;
+    }
+  };
+
+  const testGrokKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    
+    setApiKeyStatuses(prev => ({ ...prev, grok: 'testing' }));
+    onLog('🔑 Testing Grok API key...', 'info', '🔑');
+    
+    try {
+      // X.AI/Grok validation - similar to OpenAI format
+      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'grok-beta',
+          messages: [{ role: 'user', content: 'test' }],
+          max_tokens: 1
+        })
+      });
+
+      if (response.status === 200 || response.status === 400) {
+        const enhancedModels = [
+          { id: 'grok-beta', name: 'Grok Beta', context_length: 131072 },
+          { id: 'grok-vision-beta', name: 'Grok Vision Beta', context_length: 8192 },
+        ];
+        
+        setGrokModels(enhancedModels);
+        setApiKeyStatuses(prev => ({ ...prev, grok: 'valid' }));
+        onLog(`✅ Grok API key validated successfully - Found ${enhancedModels.length} models`, 'success', '✅');
+        return true;
+      } else {
+        setApiKeyStatuses(prev => ({ ...prev, grok: 'invalid' }));
+        onLog('Invalid Grok API key', 'error', '❌');
+        return false;
+      }
+    } catch (error) {
+      setApiKeyStatuses(prev => ({ ...prev, grok: 'invalid' }));
+      onLog('Failed to validate Grok API key', 'error', '❌');
       return false;
     }
   };
@@ -205,10 +440,28 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     if (!apiKey) return;
 
     let isValid = false;
-    if (provider === 'openai') {
-      isValid = await testOpenAIKey(apiKey);
-    } else {
-      isValid = await testApiKey(provider, apiKey);
+    switch (provider) {
+      case 'openai':
+        isValid = await testOpenAIKey(apiKey);
+        break;
+      case 'openrouter':
+        isValid = await testOpenRouterKey(apiKey);
+        break;
+      case 'gemini':
+        isValid = await testGeminiKey(apiKey);
+        break;
+      case 'anthropic':
+        isValid = await testAnthropicKey(apiKey);
+        break;
+      case 'deepseek':
+        isValid = await testDeepSeekKey(apiKey);
+        break;
+      case 'perplexity':
+        isValid = await testPerplexityKey(apiKey);
+        break;
+      case 'grok':
+        isValid = await testGrokKey(apiKey);
+        break;
     }
 
     if (isValid) {
@@ -238,11 +491,11 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     switch (provider) {
       case 'openai': return openaiModels;
       case 'openrouter': return openrouterModels;
-      case 'gemini': return GEMINI_MODELS;
-      case 'anthropic': return ANTHROPIC_MODELS;
-      case 'deepseek': return DEEPSEEK_MODELS;
-      case 'perplexity': return PERPLEXITY_MODELS;
-      case 'grok': return GROK_MODELS;
+      case 'gemini': return geminiModels;
+      case 'anthropic': return anthropicModels;
+      case 'deepseek': return deepseekModels;
+      case 'perplexity': return perplexityModels;
+      case 'grok': return grokModels;
       default: return [];
     }
   };
