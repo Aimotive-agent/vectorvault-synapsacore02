@@ -247,7 +247,7 @@ export const MCPWorkbench = () => {
     { id: 'openai/gpt-4o-2024-11-20', name: 'GPT-4o (November 2024)', context_length: 128000, pricing: { prompt: 0.0025, completion: 0.01 } },
   ];
 
-  // Handle settings change with database persistence
+  // Handle settings change with database persistence and model updates
   const handleSettingsChange = async (newSettings: AISettings) => {
     // Update local state immediately for UI responsiveness
     setAiSettings(newSettings);

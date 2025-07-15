@@ -103,7 +103,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     }
 
     setIsTestingOpenAI(true);
-    onLog('🔑 Testing OpenAI API key...', 'info', '🔑');
+    onLog('🔑 Testing OpenAI API key and fetching all available models...', 'info', '🔑');
 
     try {
       const response = await fetch('https://api.openai.com/v1/models', {
@@ -115,21 +115,25 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
 
       if (response.ok) {
         const data = await response.json();
-        const models = data.data
-          .filter((model: any) => model.id.includes('gpt'))
-          .map((model: any) => ({
-            id: model.id,
-            name: model.id.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-            context_window: getContextWindow(model.id),
-            pricing: getPricing(model.id)
-          }));
+        // Get ALL models from the API, not just GPT models
+        const allModels = data.data.map((model: any) => ({
+          id: model.id,
+          name: model.id.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          context_window: getContextWindow(model.id),
+          pricing: getPricing(model.id),
+          created: model.created,
+          owned_by: model.owned_by
+        }));
 
-        setAvailableModels(models.length > 0 ? models : DEFAULT_OPENAI_MODELS);
+        // Sort models by name for better UX
+        allModels.sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        setAvailableModels(allModels);
         setOpenaiKeyStatus('valid');
-        onLog('✅ OpenAI API key validated successfully', 'success', '✅');
+        onLog(`✅ OpenAI API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
         toast({
           title: "API Key Valid",
-          description: `Found ${models.length} available models`,
+          description: `Connected successfully! Found ${allModels.length} available models`,
         });
         return true;
       } else {
@@ -160,7 +164,7 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
     }
 
     setIsTestingOpenRouter(true);
-    onLog('🔑 Testing OpenRouter API key...', 'info', '🔑');
+    onLog('🔑 Testing OpenRouter API key and fetching all available models...', 'info', '🔑');
 
     try {
       const response = await fetch('https://openrouter.ai/api/v1/models', {
@@ -172,25 +176,29 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
 
       if (response.ok) {
         const data = await response.json();
-        const models: OpenRouterModel[] = data.data
-          .filter((model: any) => !model.id.includes('instruct') && !model.id.includes('vision'))
-          .slice(0, 20) // Limit to first 20 models for better UX
-          .map((model: any) => ({
-            id: model.id,
-            name: model.name || model.id,
-            context_length: model.context_length || 4096,
-            pricing: model.pricing ? {
-              prompt: parseFloat(model.pricing.prompt) || 0,
-              completion: parseFloat(model.pricing.completion) || 0
-            } : undefined
-          }));
+        // Get ALL models from OpenRouter API - they have hundreds
+        const allModels: OpenRouterModel[] = data.data.map((model: any) => ({
+          id: model.id,
+          name: model.name || model.id,
+          context_length: model.context_length || 4096,
+          pricing: model.pricing ? {
+            prompt: parseFloat(model.pricing.prompt) || 0,
+            completion: parseFloat(model.pricing.completion) || 0
+          } : { prompt: 0, completion: 0 },
+          description: model.description,
+          architecture: model.architecture,
+          per_request_limits: model.per_request_limits
+        }));
 
-        setOpenrouterModels(models);
+        // Sort models by name for better UX
+        allModels.sort((a, b) => a.name.localeCompare(b.name));
+
+        setOpenrouterModels(allModels);
         setOpenrouterKeyStatus('valid');
-        onLog('✅ OpenRouter API key validated successfully', 'success', '✅');
+        onLog(`✅ OpenRouter API key validated successfully - Found ${allModels.length} models`, 'success', '✅');
         toast({
-          title: "API Key Valid",
-          description: `Found ${models.length} available models`,
+          title: "API Key Valid", 
+          description: `Connected successfully! Found ${allModels.length} available models`,
         });
         return true;
       } else {
@@ -274,8 +282,8 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   };
 
   const getCurrentModels = () => {
-    // Always return the full model lists - no dependency on API key testing
-    return settings.provider === 'openrouter' ? DEFAULT_OPENROUTER_MODELS : DEFAULT_OPENAI_MODELS;
+    // Return the actual fetched models, not the default static lists
+    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
   };
 
   const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);
