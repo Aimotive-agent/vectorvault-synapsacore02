@@ -91,12 +91,12 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
     const systemMessage = {
       role: 'system',
-      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools. Available tools: ${tools.map(t => `${t.name} - ${t.description}`).join(', ')}. When a user asks for something that can be accomplished with these tools, use them to help complete the task. Be specific about what you're doing and explain the results. You can also analyze uploaded files, images, and documents.`
+      content: settings.systemPrompt || `You are a helpful AI assistant with access to ${tools.length} MCP tools and advanced vision capabilities. Available tools: ${tools.map(t => `${t.name} - ${t.description}`).join(', ')}. When a user asks for something that can be accomplished with these tools, use them to help complete the task. You can also analyze uploaded files, images, and documents in detail. For images, provide thorough visual analysis including objects, text, colors, composition, and any relevant insights.`
     };
 
-    const formattedMessages = [
+    const formattedMessages = await Promise.all([
       systemMessage,
-      ...messages.map(msg => {
+      ...await Promise.all(messages.map(async (msg) => {
         const messageContent: any = {
           role: msg.role,
           content: msg.content
@@ -104,20 +104,45 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
         // Add file attachments if present (for vision models)
         if (msg.file_attachments && msg.file_attachments.length > 0) {
-          messageContent.content = [
-            { type: 'text', text: msg.content },
-            ...msg.file_attachments
+          const imageAttachments = await Promise.all(
+            msg.file_attachments
               .filter(file => file.type?.startsWith('image/'))
-              .map(file => ({
-                type: 'image_url',
-                image_url: { url: file.url }
-              }))
-          ];
+              .map(async (file) => {
+                try {
+                  // Convert image URL to base64 for OpenAI vision API
+                  const response = await fetch(file.url);
+                  const blob = await response.blob();
+                  const arrayBuffer = await blob.arrayBuffer();
+                  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                  const mimeType = file.type || 'image/png';
+                  
+                  return {
+                    type: 'image_url',
+                    image_url: { 
+                      url: `data:${mimeType};base64,${base64}`,
+                      detail: 'high' // Use high detail for better analysis
+                    }
+                  };
+                } catch (error) {
+                  console.error('Error converting image to base64:', error);
+                  return null;
+                }
+              })
+          );
+
+          const validImageAttachments = imageAttachments.filter(att => att !== null);
+          
+          if (validImageAttachments.length > 0) {
+            messageContent.content = [
+              { type: 'text', text: msg.content },
+              ...validImageAttachments
+            ];
+          }
         }
 
         return messageContent;
-      })
-    ];
+      }))
+    ]);
 
     const requestBody = {
       model: settings.selectedModel || 'gpt-3.5-turbo',
