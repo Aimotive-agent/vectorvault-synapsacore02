@@ -45,13 +45,29 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   } = useChatSessions();
 
   // Get current API key based on provider
-  const currentApiKey = settings.provider === 'openrouter' 
-    ? settings.openrouterApiKey 
-    : settings.openaiApiKey;
+  const getCurrentApiKey = () => {
+    switch (settings.provider) {
+      case 'openai': return settings.openaiApiKey;
+      case 'openrouter': return settings.openrouterApiKey;
+      case 'gemini': return settings.geminiApiKey;
+      case 'anthropic': return settings.anthropicApiKey;
+      case 'deepseek': return settings.deepseekApiKey;
+      case 'perplexity': return settings.perplexityApiKey;
+      case 'grok': return settings.grokApiKey;
+      default: return '';
+    }
+  };
+  
+  const currentApiKey = getCurrentApiKey();
   
   // Use the same comprehensive model lists as passed from MCPWorkbench
   const getCurrentModels = () => {
-    return settings.provider === 'openrouter' ? openrouterModels : availableModels;
+    // For now, since we only get openai and openrouter models as props,
+    // return those based on provider. For other providers, return empty array
+    // until we update the props to include all provider models
+    if (settings.provider === 'openrouter') return openrouterModels;
+    if (settings.provider === 'openai') return availableModels;
+    return []; // For other providers, models will be managed in AISettingsCard
   };
   
   const selectedModel = getCurrentModels().find(m => m.id === settings.selectedModel);
@@ -80,13 +96,11 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     }
   }, [tools.length, servers.length, messages.length, currentSessionId]);
 
-  const callOpenAI = async (messages: ChatMessage[]): Promise<{ content: string; toolCalls?: ToolCall[] }> => {
-    const apiKey = settings.provider === 'openrouter' 
-      ? settings.openrouterApiKey 
-      : settings.openaiApiKey;
+  const callAI = async (messages: ChatMessage[]): Promise<{ content: string; toolCalls?: ToolCall[] }> => {
+    const apiKey = getCurrentApiKey();
       
     if (!apiKey) {
-      throw new Error(`${settings.provider === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key not configured`);
+      throw new Error(`${settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1)} API key not configured`);
     }
 
     const systemMessage = {
@@ -176,20 +190,45 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       console.log(`⚠️ AIChat: No tools available for OpenAI`);
     }
 
-    const apiUrl = settings.provider === 'openrouter' 
-      ? 'https://openrouter.ai/api/v1/chat/completions'
-      : 'https://api.openai.com/v1/chat/completions';
+    // Get API URL and headers based on provider
+    let apiUrl = '';
+    let headers: Record<string, string> = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    switch (settings.provider) {
+      case 'openai':
+        apiUrl = 'https://api.openai.com/v1/chat/completions';
+        break;
+      case 'openrouter':
+        apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+        headers['HTTP-Referer'] = window.location.origin;
+        headers['X-Title'] = 'MCP Workbench';
+        break;
+      case 'gemini':
+        // For Gemini, we'll use a different approach via their REST API
+        throw new Error('Gemini provider not yet implemented in chat');
+      case 'anthropic':
+        apiUrl = 'https://api.anthropic.com/v1/messages';
+        headers['anthropic-version'] = '2023-06-01';
+        break;
+      case 'deepseek':
+        apiUrl = 'https://api.deepseek.com/v1/chat/completions';
+        break;
+      case 'perplexity':
+        apiUrl = 'https://api.perplexity.ai/chat/completions';
+        break;
+      case 'grok':
+        apiUrl = 'https://api.x.ai/v1/chat/completions';
+        break;
+      default:
+        throw new Error(`Unsupported provider: ${settings.provider}`);
+    }
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        ...(settings.provider === 'openrouter' && {
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Synapsecore Super Agent'
-        })
-      },
+      headers,
       body: JSON.stringify(requestBody),
     });
 
@@ -410,7 +449,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       onLog('💬 Processing message with AI...', 'info', '💬');
       
       const allMessages = [...messages, userMessage];
-      const aiResponse = await callOpenAI(allMessages);
+      const aiResponse = await callAI(allMessages);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -486,9 +525,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   };
 
   const canSendMessage = () => {
-    const hasApiKey = settings.provider === 'openrouter' 
-      ? settings.openrouterApiKey 
-      : settings.openaiApiKey;
+    const hasApiKey = getCurrentApiKey();
     
     // Basic requirements for sending a message
     return inputMessage.trim().length > 0 && 
@@ -565,18 +602,23 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
             {/* Provider Selection */}
             <div className="flex items-center gap-2">
               <Settings className="h-3 w-3" />
-              <Select
-                value={settings.provider}
-                onValueChange={(value) => onSettingsChange({ ...settings, provider: value as 'openai' | 'openrouter' })}
-              >
-                <SelectTrigger className="h-7 text-xs min-w-[100px] border-muted">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="openrouter">OpenRouter</SelectItem>
-                </SelectContent>
-              </Select>
+               <Select
+                 value={settings.provider}
+                 onValueChange={(value) => onSettingsChange({ ...settings, provider: value as AISettings['provider'] })}
+               >
+                 <SelectTrigger className="h-7 text-xs min-w-[100px] border-muted">
+                   <SelectValue />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="openai">OpenAI</SelectItem>
+                   <SelectItem value="openrouter">OpenRouter</SelectItem>
+                   <SelectItem value="gemini">Gemini</SelectItem>
+                   <SelectItem value="anthropic">Anthropic</SelectItem>
+                   <SelectItem value="deepseek">DeepSeek</SelectItem>
+                   <SelectItem value="perplexity">Perplexity</SelectItem>
+                   <SelectItem value="grok">Grok</SelectItem>
+                 </SelectContent>
+               </Select>
             </div>
             
             {/* Model Selection */}
