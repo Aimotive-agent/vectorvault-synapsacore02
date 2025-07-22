@@ -1,18 +1,17 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { MCPWorkbench } from '@/components/mcp/MCPWorkbench';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import Navigation from '@/components/Navigation';
 
 const Index = () => {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, loading: isLoading, logout: signOut } = useAuth();
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -29,8 +28,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <Navigation />
+      
       {/* User Header */}
-      <div className="border-b bg-card/50">
+      <div className="border-b bg-card/50 mt-16">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">

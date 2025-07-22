@@ -4,12 +4,19 @@ import { MCPServerForm } from './MCPServerForm';
 import { ConnectedServers } from './ConnectedServers';
 import { AvailableTools } from './AvailableTools';
 import { AISettingsCard } from './AISettingsCard';
-import { AIChat } from './AIChat';
+import AIChatWithVectorVault from './AIChatWithVectorVault';
 import { ActivityLog } from './ActivityLog';
 import { useAISettings } from '@/hooks/useAISettings';
 import { useMCPServers } from '@/hooks/useMCPServers';
-import { Bot, Settings, Server, Wrench, MessageSquare, Activity, Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Settings, Server, MessageSquare } from 'lucide-react';
+import { BotIcon, WrenchIcon, ActivityIcon, SunIcon, MoonIcon } from './CustomMCPIcons';
+// Mock useTheme hook since next-themes is not available
+const useTheme = () => {
+  return {
+    theme: 'dark',
+    setTheme: (theme: string) => console.log('Theme would change to:', theme)
+  };
+};
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -609,8 +616,7 @@ export const MCPWorkbench = () => {
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="rounded-full"
             >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              {theme === 'dark' ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
               <span className="sr-only">Toggle theme</span>
             </Button>
           </div>
@@ -643,7 +649,7 @@ export const MCPWorkbench = () => {
             </TabsTrigger>
             
             <TabsTrigger value="tools" className="flex items-center gap-2">
-              <Wrench className="h-4 w-4" />
+              <WrenchIcon className="h-4 w-4" />
               Tools
               <Badge variant="secondary" className="ml-1 text-xs">
                 {badges.tools}
@@ -673,7 +679,7 @@ export const MCPWorkbench = () => {
             </TabsTrigger>
             
             <TabsTrigger value="logs" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
+              <ActivityIcon className="h-4 w-4" />
               Activity
               <Badge variant="secondary" className="ml-1 text-xs">
                 {badges.logs}
@@ -716,7 +722,7 @@ export const MCPWorkbench = () => {
           </TabsContent>
 
           <TabsContent value="chat" className="space-y-6">
-            <AIChat 
+            <AIChatWithVectorVault 
               servers={servers}
               tools={tools}
               settings={aiSettings}

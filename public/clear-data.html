@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear VectorVault Test Data</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Clear VectorVault Test Data</h1>
+  <p>This page will clear all test data from localStorage to ensure a fresh start with no mock data.</p>
+  
+  <button id="clearButton">Clear All Test Data</button>
+  <button id="restartButton">Restart Application</button>
+  
+  <div id="result"></div>
+  
+  <script>
+    document.getElementById('clearButton').addEventListener('click', function() {
+      // Clear all VectorVault related data
+      localStorage.removeItem('vectorvault_knowledge_bases');
+      localStorage.removeItem('vectorvault_documents');
+      localStorage.removeItem('vectorvault_active_kb');
+      localStorage.removeItem('vectorvault_keys');
+      
+      // Log the result
+      document.getElementById('result').innerHTML = 
+        '<p>✅ All VectorVault test data has been cleared from localStorage.</p>' +
+        '<p>Current localStorage items:</p>' +
+        '<pre>' + JSON.stringify(Object.keys(localStorage), null, 2) + '</pre>';
+    });
+    
+    document.getElementById('restartButton').addEventListener('click', function() {
+      window.location.href = '/';
+    });
+  </script>
+</body>
+</html>
