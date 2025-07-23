@@ -8,7 +8,7 @@
   command = "npm run build"
 
   # This is the directory that contains the built site, relative to the root
-  publish = "synapsecore/dist"
+  publish = "dist"
 
 # This rule ensures that your single-page application (SPA) works correctly
 # with client-side routing. All paths will be served the index.html file.
