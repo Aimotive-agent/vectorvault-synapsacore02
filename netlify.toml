@@ -1,0 +1,18 @@
+# Netlify build configuration
+
+[build]
+  # This tells Netlify to change to the 'synapsecore' directory before building
+  base = "synapsecore"
+
+  # This is the command to build the site
+  command = "npm run build"
+
+  # This is the directory that contains the built site, relative to the root
+  publish = "synapsecore/dist"
+
+# This rule ensures that your single-page application (SPA) works correctly
+# with client-side routing. All paths will be served the index.html file.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
