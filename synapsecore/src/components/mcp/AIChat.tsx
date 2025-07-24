@@ -235,6 +235,42 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     setIsProcessing(true);
 
     try {
+      // Check if user wants to execute a tool directly
+      if (tools && tools.length > 0) {
+        const lowerInput = userMessage.content.toLowerCase();
+        
+        // Simple tool detection for Google Drive operations
+        if (lowerInput.includes('find') && (lowerInput.includes('folder') || lowerInput.includes('file'))) {
+          let toolName = '';
+          if (lowerInput.includes('folder')) {
+            toolName = tools.find(t => t.name.includes('FIND-FOLDER'))?.name || '';
+          } else {
+            toolName = tools.find(t => t.name.includes('FIND-FILE'))?.name || '';
+          }
+          
+          if (toolName) {
+            try {
+              onLog(` Executing ${toolName}...`, 'info', ' ');
+              const { executeTool } = useMCPServers();
+              const result = await executeTool(toolName, { instruction: userMessage.content });
+              
+              const botMessage: ChatMessage = {
+                id: `asst_${Date.now()}`,
+                role: 'assistant',
+                content: `I executed ${toolName} for you:\n\n${JSON.stringify(result, null, 2)}`,
+                timestamp: new Date().toISOString(),
+                toolCalls: [],
+              };
+              setMessages(prev => [...prev, botMessage]);
+              if (activeSessionId) saveMessage(botMessage, activeSessionId);
+              return;
+            } catch (error: any) {
+              onLog(` Tool execution failed: ${error.message}`, 'error', ' ');
+            }
+          }
+        }
+      }
+      
       let augmentedPrompt = userMessage.content;
       
       // Add MCP tools context to the prompt
@@ -245,6 +281,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
         }).join('\n')}\n\n=== TOOL USAGE INSTRUCTIONS ===\nYou have full access to these ${tools.length} MCP tools. When a user's request can be fulfilled using any of these tools, you should:\n1. Explain which tool(s) would be helpful\n2. Describe what the tool will do\n3. Ask for any required parameters if not provided\n4. Let the user know they can execute the tool through this chat interface\n\nThese tools can help with file operations, data processing, API calls, and various other tasks. Feel free to suggest their use when appropriate.`;
         
         augmentedPrompt = userMessage.content + toolsContext;
+        onLog(`Added ${tools.length} MCP tools with full schemas to context.`, 'info', ' ');
         onLog(`Added ${tools.length} MCP tools with full schemas to context.`, 'info', '🔧');
       }
       
