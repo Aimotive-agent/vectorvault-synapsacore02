@@ -3,6 +3,7 @@ import { AppContext } from './contexts/AppContext';
 import { ChatMessage } from './types';
 import { BotIcon, SendIcon, DatabaseIcon } from './CustomIcons';
 import vectorRetrievalService from '../../services/vectorRetrievalService';
+import vectorVaultService from '../../services/vectorVaultService';
 import geminiService from './services/geminiService';
 
 const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
@@ -51,17 +52,28 @@ const ChatView: React.FC = () => {
         try {
             let finalPrompt = currentInput;
             
+            // Check if there are any documents in the selected knowledge base
+            const allDocuments = await vectorVaultService.getDocuments();
+            const kbDocuments = allDocuments.filter(doc => doc.knowledgeBaseId === selectedKbId);
+            console.log('ChatView: Found', kbDocuments.length, 'documents in knowledge base', selectedKbId);
+            if (kbDocuments.length > 0) {
+                console.log('ChatView: Sample document:', { name: kbDocuments[0].name, hasContent: !!kbDocuments[0].content, hasVectorData: !!kbDocuments[0].vectorData });
+            }
+            
             // Try to get RAG-enhanced prompt, but fallback to direct query if it fails
+            console.log('ChatView: Starting RAG prompt generation with:', { selectedKbId, currentInput });
             try {
                 finalPrompt = await vectorRetrievalService.generateRAGPrompt(
                     'You are a helpful AI assistant. Please answer the following question:',
                     selectedKbId, 
                     currentInput
                 );
-                console.log('ChatView: Successfully generated RAG prompt');
+                console.log('ChatView: Successfully generated RAG prompt, length:', finalPrompt.length);
+                console.log('ChatView: RAG prompt preview:', finalPrompt.substring(0, 200) + '...');
             } catch (ragError) {
-                console.warn('ChatView: RAG prompt generation failed, using direct query:', ragError);
+                console.error('ChatView: RAG prompt generation failed:', ragError);
                 finalPrompt = `You are a helpful AI assistant. Please answer the following question: ${currentInput}`;
+                console.log('ChatView: Using fallback prompt, length:', finalPrompt.length);
             }
 
             const responseText = await geminiService.generateResponse(finalPrompt);
