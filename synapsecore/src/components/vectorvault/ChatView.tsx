@@ -41,6 +41,7 @@ const ChatView: React.FC = () => {
     }, [knowledgeBases, selectedKbId]);
 
     const handleSend = useCallback(async () => {
+        console.log('🔥 SYNAPSECORE ChatView handleSend called! 🔥');
         if (!input.trim() || isLoading || !selectedKbId) return;
 
         const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: input };
@@ -59,14 +60,21 @@ const ChatView: React.FC = () => {
                 console.log('ChatView: Sample document:', { name: kbDocuments[0].name, hasContent: !!kbDocuments[0].content, hasVectorData: !!kbDocuments[0].vectorData });
             }
             
-            const ragPrompt = await vectorRetrievalService.generateRAGPrompt(
-                'Answer the following question based on the provided context.',
-                selectedKbId,
-                input
-            );
+            // DIRECT FIX: Build prompt with document context directly
+            let ragPrompt = input; // Start with user query
             
-            console.log('ChatView: Generated RAG prompt, length:', ragPrompt.length);
-            console.log('ChatView: RAG prompt preview:', ragPrompt.substring(0, 200) + '...');
+            if (kbDocuments.length > 0) {
+                // Build context from documents
+                const documentContext = kbDocuments.map(doc => {
+                    return `Document: ${doc.name}\n${doc.content || 'No content available'}`;
+                }).join('\n\n');
+                
+                // Build full prompt with context
+                ragPrompt = `Context:\n${documentContext}\n\nQuestion: ${input}\n\nPlease answer the question based on the provided context. If the context doesn't contain relevant information, say so.`;
+            }
+            
+            console.log('ChatView: Built prompt directly, length:', ragPrompt.length);
+            console.log('ChatView: Prompt preview:', ragPrompt.substring(0, 200) + '...');
             
             const modelResponse = await geminiService.generateResponse(ragPrompt);
             const botMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: modelResponse };

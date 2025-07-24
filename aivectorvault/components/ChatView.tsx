@@ -47,6 +47,7 @@ const ChatView: React.FC = () => {
     }, [selectedKbId, knowledgeBases]);
 
     const handleSend = useCallback(async () => {
+        console.log('🚀 AIVECTORVAULT ChatView handleSend called! 🚀');
         if (!input.trim() || isLoading || !selectedKbId) return;
 
         const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: input };

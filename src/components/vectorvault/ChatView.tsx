@@ -2,7 +2,6 @@ import React, { useState, useContext, useRef, useEffect, useCallback } from 'rea
 import { AppContext } from './contexts/AppContext';
 import { ChatMessage } from './types';
 import { BotIcon, SendIcon, DatabaseIcon } from './CustomIcons';
-import vectorRetrievalService from '../../services/vectorRetrievalService';
 import vectorVaultService from '../../services/vectorVaultService';
 import geminiService from './services/geminiService';
 
@@ -64,45 +63,40 @@ const ChatView: React.FC = () => {
                 console.log('ChatView: Sample document:', { name: kbDocuments[0].name, hasContent: !!kbDocuments[0].content, hasVectorData: !!kbDocuments[0].vectorData });
             }
             
-            // Try to get RAG-enhanced prompt with comprehensive fallback
-            console.log('ChatView: Starting RAG prompt generation with:', { selectedKbId, currentInput });
+            // DIRECT FIX: Always include document context in the prompt
+            console.log('ChatView: Building prompt with document context for:', { selectedKbId, currentInput, documentCount: kbDocuments.length });
             
             if (kbDocuments.length > 0) {
-                try {
-                    finalPrompt = await vectorRetrievalService.generateRAGPrompt(
-                        'You are a helpful AI assistant. Answer the question based on the provided context.',
-                        selectedKbId, 
-                        currentInput
-                    );
-                    console.log('ChatView: Successfully generated RAG prompt, length:', finalPrompt.length);
-                    console.log('ChatView: RAG prompt preview:', finalPrompt.substring(0, 200) + '...');
-                } catch (ragError) {
-                    console.error('ChatView: RAG prompt generation failed, using document content directly:', ragError);
-                    
-                    // Fallback: Create prompt with document content directly
-                    const documentContext = kbDocuments
-                        .slice(0, 3) // Use top 3 documents
-                        .map(doc => `Document: ${doc.name}\nContent: ${doc.content || 'No content available'}`)
-                        .join('\n\n');
-                    
-                    finalPrompt = `You are a helpful AI assistant. Answer the following question based on the provided context.
+                // Always use direct document content to ensure context is included
+                const documentContext = kbDocuments
+                    .slice(0, 5) // Use top 5 documents
+                    .map(doc => {
+                        const content = doc.content || doc.name || 'No content available';
+                        return `Document: ${doc.name}\nContent: ${content.substring(0, 1000)}`; // Limit content length
+                    })
+                    .join('\n\n');
+                
+                finalPrompt = `You are a helpful AI assistant. Answer the following question based on the provided context from the knowledge base.
 
-Context:
+Context from Knowledge Base:
 ${documentContext}
 
-Question: ${currentInput}
+User Question: ${currentInput}
 
-Please provide a helpful answer based on the context above.`;
-                    
-                    console.log('ChatView: Using direct document fallback prompt, length:', finalPrompt.length);
-                }
+Please provide a detailed answer based on the context above. If the context doesn't contain relevant information, please say so and provide a general response.`;
+                
+                console.log('ChatView: Created prompt with document context, length:', finalPrompt.length);
             } else {
-                console.log('ChatView: No documents found, using basic prompt');
-                finalPrompt = `You are a helpful AI assistant. The user asked: "${currentInput}". Please provide a helpful response. Note: No specific documents were found in the knowledge base to provide context.`;
+                finalPrompt = `You are a helpful AI assistant. The user asked: "${currentInput}". Please provide a helpful response. Note: No documents were found in the selected knowledge base.`;
+                console.log('ChatView: No documents found, using basic prompt, length:', finalPrompt.length);
             }
             
             console.log('ChatView: Final prompt length:', finalPrompt.length);
 
+            // CRITICAL FIX: Ensure document context is always included
+            console.log('ChatView: About to call geminiService with prompt length:', finalPrompt.length);
+            console.log('ChatView: Prompt preview:', finalPrompt.substring(0, 100));
+            
             const responseText = await geminiService.generateResponse(finalPrompt);
             
             const modelMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: responseText };
