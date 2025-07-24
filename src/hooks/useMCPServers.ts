@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MCPServer, LogEntry } from '@/types/mcp';
@@ -14,6 +14,27 @@ export const useMCPServers = () => {
 
   const loadServers = async () => {
     try {
+      // First try to load from localStorage regardless of auth status
+      const storedServers = localStorage.getItem('mcp_servers');
+      let localServers: MCPServer[] = [];
+      
+      if (storedServers) {
+        try {
+          const parsedServers = JSON.parse(storedServers);
+          localServers = parsedServers.map((server: any) => ({
+            ...server,
+            lastConnected: new Date(server.lastConnected),
+          }));
+          console.log('Loaded MCP servers from localStorage:', localServers);
+          
+          // Set servers from localStorage first for immediate display
+          setServers(localServers);
+        } catch (parseError) {
+          console.error('Error parsing stored servers:', parseError);
+        }
+      }
+      
+      // Then try to load from Supabase if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -26,7 +47,7 @@ export const useMCPServers = () => {
 
         if (error) throw error;
 
-        if (data) {
+        if (data && data.length > 0) {
           const mcpServers: MCPServer[] = data.map(server => ({
             id: server.id,
             name: server.name,
@@ -36,18 +57,18 @@ export const useMCPServers = () => {
             tools: Array.isArray(server.tools) ? server.tools as any[] : [],
             lastConnected: new Date(server.last_connected),
           }));
+          
+          // Save to localStorage for persistence across sessions
+          localStorage.setItem('mcp_servers', JSON.stringify(mcpServers));
+          
           setServers(mcpServers);
-        }
-      } else {
-        // Load from localStorage if not authenticated
-        const storedServers = localStorage.getItem('mcp_servers');
-        if (storedServers) {
-          const parsedServers = JSON.parse(storedServers);
-          const mcpServers: MCPServer[] = parsedServers.map((server: any) => ({
-            ...server,
-            lastConnected: new Date(server.lastConnected),
-          }));
-          setServers(mcpServers);
+          console.log('Loaded MCP servers from Supabase:', mcpServers);
+        } else if (localServers.length > 0) {
+          // If no Supabase data but we have localStorage data, save it to Supabase
+          console.log('No servers in Supabase but found in localStorage, syncing to Supabase');
+          for (const server of localServers) {
+            await saveServer(server);
+          }
         }
       }
     } catch (error) {
@@ -73,6 +94,40 @@ export const useMCPServers = () => {
 
   const saveServer = async (server: MCPServer) => {
     try {
+      // Always save to localStorage for persistence across sessions
+      const existingServers = localStorage.getItem('mcp_servers');
+      let servers: MCPServer[] = [];
+      
+      if (existingServers) {
+        try {
+          servers = JSON.parse(existingServers);
+        } catch (parseError) {
+          console.error('Error parsing stored servers:', parseError);
+        }
+      }
+      
+      const existingIndex = servers.findIndex(s => s.id === server.id);
+      if (existingIndex >= 0) {
+        servers[existingIndex] = server;
+      } else {
+        servers.push(server);
+      }
+      
+      localStorage.setItem('mcp_servers', JSON.stringify(servers));
+      
+      // Update local state immediately
+      setServers(prev => {
+        const existingIndex = prev.findIndex(s => s.id === server.id);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = server;
+          return updated;
+        } else {
+          return [...prev, server];
+        }
+      });
+      
+      // Then try to save to Supabase if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -93,36 +148,9 @@ export const useMCPServers = () => {
           .upsert(serverData, { onConflict: 'id' });
 
         if (error) throw error;
-      } else {
-        // Save to localStorage if not authenticated
-        const existingServers = localStorage.getItem('mcp_servers');
-        let servers: MCPServer[] = [];
-        
-        if (existingServers) {
-          servers = JSON.parse(existingServers);
-        }
-        
-        const existingIndex = servers.findIndex(s => s.id === server.id);
-        if (existingIndex >= 0) {
-          servers[existingIndex] = server;
-        } else {
-          servers.push(server);
-        }
-        
-        localStorage.setItem('mcp_servers', JSON.stringify(servers));
       }
 
-      // Update local state
-      setServers(prev => {
-        const existingIndex = prev.findIndex(s => s.id === server.id);
-        if (existingIndex >= 0) {
-          const updated = [...prev];
-          updated[existingIndex] = server;
-          return updated;
-        } else {
-          return [...prev, server];
-        }
-      });
+      // Local state already updated above
 
     } catch (error) {
       console.error('Error saving MCP server:', error);
@@ -168,6 +196,22 @@ export const useMCPServers = () => {
 
   const removeServer = async (serverId: string) => {
     try {
+      // Always remove from localStorage for consistency
+      const existingServers = localStorage.getItem('mcp_servers');
+      if (existingServers) {
+        try {
+          const servers: MCPServer[] = JSON.parse(existingServers);
+          const filteredServers = servers.filter(s => s.id !== serverId);
+          localStorage.setItem('mcp_servers', JSON.stringify(filteredServers));
+        } catch (parseError) {
+          console.error('Error parsing stored servers:', parseError);
+        }
+      }
+      
+      // Update local state immediately
+      setServers(prev => prev.filter(s => s.id !== serverId));
+      
+      // Then try to remove from Supabase if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -179,18 +223,9 @@ export const useMCPServers = () => {
           .eq('user_id', user.id);
 
         if (error) throw error;
-      } else {
-        // Remove from localStorage if not authenticated
-        const existingServers = localStorage.getItem('mcp_servers');
-        if (existingServers) {
-          const servers: MCPServer[] = JSON.parse(existingServers);
-          const filteredServers = servers.filter(s => s.id !== serverId);
-          localStorage.setItem('mcp_servers', JSON.stringify(filteredServers));
-        }
       }
 
-      // Update local state
-      setServers(prev => prev.filter(s => s.id !== serverId));
+      // Local state already updated above
 
     } catch (error) {
       console.error('Error removing MCP server:', error);
@@ -219,7 +254,8 @@ export const useMCPServers = () => {
     const newServer: MCPServer = {
       ...serverData,
       id: Date.now().toString(),
-      status: 'disconnected' as const
+      status: 'disconnected' as const,
+      lastConnected: new Date() // Ensure lastConnected is a valid Date object
     };
     
     try {
@@ -246,24 +282,29 @@ export const useMCPServers = () => {
       // Simulate server refresh - in a real implementation, this would reconnect to the server
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Update server status
-      setServers(prev => prev.map(s => 
-        s.id === serverId 
-          ? { ...s, status: 'connected' as const, lastConnected: new Date().toISOString() }
-          : s
-      ));
+      // Create updated server with new status and lastConnected date
+      const updatedServer = {
+        ...server,
+        status: 'connected' as const,
+        lastConnected: new Date()
+      };
+      
+      // Save the updated server to persist the changes
+      await saveServer(updatedServer);
       
       onLog?.({ message: `Server "${server.name}" refreshed successfully`, type: 'success', icon: '✅' } as LogEntry);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error refreshing server:', error);
       onLog?.({ message: `Failed to refresh server: ${error.message}`, type: 'error', icon: '❌' } as LogEntry);
       
-      // Update server status to disconnected on error
-      setServers(prev => prev.map(s => 
-        s.id === serverId 
-          ? { ...s, status: 'disconnected' as const }
-          : s
-      ));
+      // Create updated server with disconnected status
+      const updatedServer = {
+        ...server,
+        status: 'disconnected' as const
+      };
+      
+      // Save the updated server to persist the changes
+      await saveServer(updatedServer);
     }
   };
 

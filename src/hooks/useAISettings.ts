@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AISettings } from '@/types/mcp';
@@ -34,8 +34,24 @@ export const useAISettings = () => {
 
   const loadSettings = async () => {
     try {
+      // First try to load from localStorage regardless of auth status
+      const storedSettings = localStorage.getItem('ai_settings');
+      let loadedSettings = DEFAULT_SETTINGS;
+      
+      if (storedSettings) {
+        try {
+          loadedSettings = JSON.parse(storedSettings);
+          console.log('Loaded AI settings from localStorage:', loadedSettings);
+        } catch (parseError) {
+          console.error('Error parsing stored AI settings:', parseError);
+        }
+      }
+      
+      // Then try to load from Supabase if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // If no user, use the localStorage settings or defaults
+        setSettings(loadedSettings);
         setIsLoading(false);
         return;
       }
@@ -51,7 +67,7 @@ export const useAISettings = () => {
       }
 
        if (data) {
-         const loadedSettings = {
+         const supabaseSettings = {
            openaiApiKey: data.openai_api_key || '',
            openrouterApiKey: data.openrouter_api_key || '',
            geminiApiKey: data.gemini_api_key || '',
@@ -65,11 +81,15 @@ export const useAISettings = () => {
            maxTokens: data.max_tokens || DEFAULT_SETTINGS.maxTokens,
            systemPrompt: data.system_prompt || DEFAULT_SETTINGS.systemPrompt,
          };
-         console.log('Loading AI settings:', loadedSettings);
-         setSettings(loadedSettings);
+         console.log('Loading AI settings from Supabase:', supabaseSettings);
+         
+         // Save to localStorage for persistence across sessions
+         localStorage.setItem('ai_settings', JSON.stringify(supabaseSettings));
+         
+         setSettings(supabaseSettings);
        } else {
-         console.log('No saved settings found, using defaults');
-         setSettings(DEFAULT_SETTINGS);
+         console.log('No saved settings found in Supabase, using localStorage or defaults');
+         // If no Supabase data, keep using the localStorage settings loaded earlier
        }
     } catch (error) {
       console.error('Error loading AI settings:', error);
@@ -85,12 +105,19 @@ export const useAISettings = () => {
 
   const saveSettings = async (newSettings: AISettings) => {
     try {
+      // Always save to localStorage for persistence across sessions
+      localStorage.setItem('ai_settings', JSON.stringify(newSettings));
+      
+      // Update local state immediately
+      setSettings(newSettings);
+      
+      // Then try to save to Supabase if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // If not authenticated, still show success since we saved to localStorage
         toast({
-          title: "Authentication required",
-          description: "Please sign in to save settings",
-          variant: "destructive",
+          title: "Settings Saved",
+          description: "AI settings saved locally",
         });
         return;
       }
@@ -117,9 +144,6 @@ export const useAISettings = () => {
 
       if (error) throw error;
 
-      // Update local state immediately after successful save
-      setSettings(newSettings);
-      
       toast({
         title: "Settings Saved",
         description: "AI settings saved successfully",
