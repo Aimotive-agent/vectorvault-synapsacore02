@@ -11,6 +11,15 @@ export const vectorVaultService = {
     return storedKbs ? JSON.parse(storedKbs) : [];
   },
 
+  async setActiveKnowledgeBase(id: string): Promise<{ success: boolean }> {
+    localStorage.setItem('vectorvault_active_kb', id);
+    return { success: true };
+  },
+
+  async getActiveKnowledgeBaseId(): Promise<string | null> {
+    return localStorage.getItem('vectorvault_active_kb');
+  },
+
   async getDocuments(): Promise<Document[]> {
     const storedDocs = localStorage.getItem('documents');
     return storedDocs ? JSON.parse(storedDocs) : [];

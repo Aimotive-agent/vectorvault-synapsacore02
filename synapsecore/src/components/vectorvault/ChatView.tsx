@@ -48,8 +48,12 @@ const ChatView: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const vectorContext = await vectorRetrievalService.search(selectedKbId, input);
-            const modelResponse = await geminiService.generateResponse(input, vectorContext);
+            const ragPrompt = await vectorRetrievalService.generateRAGPrompt(
+                'Answer the following question based on the provided context.',
+                selectedKbId,
+                input
+            );
+            const modelResponse = await geminiService.generateResponse(ragPrompt);
             const botMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: modelResponse };
             setMessages(prev => [...prev, botMessage]);
         } catch (error) {

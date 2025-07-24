@@ -50,9 +50,9 @@ const ChatView: React.FC = () => {
 
         try {
             const ragPrompt = await vectorRetrievalService.generateRAGPrompt(
+                'Answer the following question based on the provided context.',
                 selectedKbId, 
-                currentInput, 
-                'Answer the following question based on the provided context.'
+                currentInput
             );
 
             const responseText = await geminiService.generateResponse(ragPrompt);
@@ -65,7 +65,7 @@ const ChatView: React.FC = () => {
             const errorMessage: ChatMessage = {
                 id: `error-${Date.now()}`,
                 role: 'model',
-                content: `Sorry, I encountered an error: ${(error as Error).message}`
+                content: `ERROR DETAILS: ${(error as Error).message || error}`
             };
             setMessages(prev => [...prev, errorMessage]);
         } finally {

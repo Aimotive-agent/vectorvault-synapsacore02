@@ -60,6 +60,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   }
 
   const handleSendMessage = async () => {
+    console.log('handleSendMessage called!', { inputMessage: inputMessage.trim(), isProcessing });
     if (!inputMessage.trim() || isProcessing) return;
 
     const userMessage: ChatMessage = {
@@ -100,53 +101,57 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       }
     }
 
-    // This is a simulated response for when there is no API key in SynapseCore
-    const simulatedResponse = () => {
+    // Use Gemini service as fallback when no API key is provided
+    try {
+      let augmentedPrompt = inputMessage;
+      if (selectedKbId) {
+        try {
+          augmentedPrompt = await vectorRetrievalService.generateRAGPrompt(settings.systemPrompt, selectedKbId, inputMessage);
+          toast({ title: "Context Augmented", description: `Prompt has been augmented with context from the selected vector base.` });
+        } catch (error) {
+          console.error("Failed to augment prompt:", error);
+          toast({ title: "Vector Retrieval Failed", description: String(error), variant: "destructive" });
+        }
+      }
+
+      // Show thinking message
+      const thinkingMessage: ChatMessage = {
+        id: `thinking-${Date.now()}`,
+        role: 'assistant',
+        content: 'Thinking...',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, thinkingMessage]);
+
+      // Call Gemini service with the augmented prompt
+      const responseText = await geminiService.generateResponse(augmentedPrompt);
+      
+      // Replace thinking message with actual response
       const botMessage: ChatMessage = {
         id: `asst_${Date.now()}`,
         role: 'assistant',
-        content: 'I am in simulated mode. Please provide an API key to connect to the live AI model.',
+        content: responseText,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, botMessage]);
-      setIsProcessing(false);
-    };
-
-    if (!currentApiKey) {
-      return simulatedResponse();
-    }
-
-    let augmentedPrompt = inputMessage;
-    if (selectedKbId) {
-      try {
-        augmentedPrompt = await vectorRetrievalService.generateRAGPrompt(settings.systemPrompt, selectedKbId, inputMessage);
-        toast({ title: "Context Augmented", description: `Prompt has been augmented with context from the selected vector base.` });
-      } catch (error) {
-        console.error("Failed to augment prompt:", error);
-        toast({ title: "Vector Retrieval Failed", description: String(error), variant: "destructive" });
-      }
-    }
-
-    const assistantMessage: ChatMessage = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: 'Thinking...',
-      timestamp: new Date(),
-      toolCalls: [],
-    };
-    setMessages((prev) => [...prev, assistantMessage]);
-
-    // This is where you would call your actual AI service
-    // For now, we'll simulate a response.
-    setTimeout(() => {
-      const simulatedResponse = {
-        ...assistantMessage,
-        content: `This is a simulated response to: "${inputMessage}". The full prompt was: "${augmentedPrompt}"`,
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === thinkingMessage.id ? botMessage : msg
+      ));
+      
+      if (activeSessionId) saveMessage(botMessage, activeSessionId);
+      
+    } catch (error) {
+      console.error('Error generating response from Gemini service:', error);
+      const errorMessage: ChatMessage = {
+        id: `asst_${Date.now()}`,
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${(error as Error).message || error}`,
+        timestamp: new Date(),
       };
-      setMessages((prev) => prev.map((msg) => (msg.id === simulatedResponse.id ? simulatedResponse : msg)));
-      if (activeSessionId) saveMessage(simulatedResponse, activeSessionId);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -163,10 +168,15 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   };
 
   const canSendMessage = () => {
-    if (isVectorVault) {
-      return inputMessage.trim() !== '' && !isProcessing;
-    }
-    return inputMessage.trim() !== '' && !isProcessing && !!currentApiKey;
+    const canSend = inputMessage.trim() !== '' && !isProcessing;
+    console.log('canSendMessage check:', {
+      inputMessage: inputMessage.trim(),
+      isProcessing,
+      currentApiKey,
+      isVectorVault,
+      canSend
+    });
+    return canSend;
   };
 
   return (

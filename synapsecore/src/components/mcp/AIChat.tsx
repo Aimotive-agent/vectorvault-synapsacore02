@@ -30,7 +30,7 @@ interface AIChatProps {
 export const AIChat = ({ servers, tools, settings, onSettingsChange, availableModels, openrouterModels, onLog, isVectorVault = false }: AIChatProps) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const { sessions, activeSessionId, createSession, switchSession, addMessageToSession, updateMessageInSession } = useChatSessions();
+  const { sessions, currentSessionId: activeSessionId, createSession, loadMessages: switchSession, messages, setMessages, saveMessage } = useChatSessions();
   const { selectedKbId, setSelectedKbId } = useContext(AppContext);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -55,39 +55,47 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       timestamp: new Date().toISOString(),
     };
 
-    addMessageToSession(activeSessionId, userMessage);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    if (activeSessionId) saveMessage(userMessage, activeSessionId);
     setInputMessage('');
     setIsProcessing(true);
 
     try {
-      let context = '';
+      let augmentedPrompt = userMessage.content;
       if (selectedKbId) {
         onLog('Retrieving context from Vector Vault...', 'info', '🧠');
-        const searchResult = await vectorRetrievalService.search(selectedKbId, userMessage.content);
-        if (searchResult && searchResult.length > 0) {
-          context = searchResult.map(r => r.text).join('\n\n');
-          onLog(`Retrieved ${searchResult.length} context chunks.`, 'success', '🧠');
-        } else {
-          onLog('No relevant context found in Vector Vault.', 'warning', '🧠');
-        }
+        augmentedPrompt = await vectorRetrievalService.generateRAGPrompt(
+          settings.systemPrompt || 'You are a helpful AI assistant.',
+          selectedKbId,
+          userMessage.content
+        );
+        onLog('Generated RAG-enhanced prompt.', 'success', '🧠');
       }
 
-      const botMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      // Show thinking message
+      const thinkingMessage: ChatMessage = {
+        id: `thinking-${Date.now()}`,
         role: 'assistant',
-        content: '',
+        content: 'Thinking...',
         timestamp: new Date().toISOString(),
         toolCalls: [],
       };
-      addMessageToSession(activeSessionId, botMessage);
+      setMessages(prev => [...prev, thinkingMessage]);
 
-      const stream = await geminiService.generateResponse(userMessage.content, context);
+      // Get AI response using augmented prompt
+      const responseText = await geminiService.generateResponse(augmentedPrompt);
       
-      let accumulatedContent = '';
-      for await (const chunk of stream) {
-        accumulatedContent += chunk;
-        updateMessageInSession(activeSessionId, botMessage.id, { content: accumulatedContent });
-      }
+      // Replace thinking message with actual response
+      const botMessage: ChatMessage = {
+        id: `asst_${Date.now()}`,
+        role: 'assistant',
+        content: responseText,
+        timestamp: new Date().toISOString(),
+        toolCalls: [],
+      };
+      setMessages(prev => prev.map(msg => (msg.id === thinkingMessage.id ? botMessage : msg)));
+      if (activeSessionId) saveMessage(botMessage, activeSessionId);
 
     } catch (error: any) {
       const errorMessage = `Error: ${error.message || 'An unexpected error occurred.'}`;
@@ -98,7 +106,8 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      addMessageToSession(activeSessionId, errorBotMessage);
+      setMessages(prev => [...prev, errorBotMessage]);
+    if (activeSessionId) saveMessage(errorBotMessage, activeSessionId);
       onLog(errorMessage, 'error', '🔥');
     } finally {
       setIsProcessing(false);
@@ -135,7 +144,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
-          {activeMessages.map((message) => (
+          {messages.map((message) => (
             <div key={message.id} className={`flex items-start gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
               {message.role === 'assistant' && (
                 <div className="w-8 h-8 rounded-full bg-brand-purple flex items-center justify-center flex-shrink-0">
@@ -162,7 +171,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
               )}
             </div>
           ))}
-          {isProcessing && activeMessages[activeMessages.length - 1]?.role === 'user' && (
+          {isProcessing && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex items-start gap-4">
                <div className="w-8 h-8 rounded-full bg-brand-purple flex items-center justify-center flex-shrink-0">
                   <BotIcon className="w-5 h-5 text-white" />

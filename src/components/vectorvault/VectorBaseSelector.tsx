@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Database } from 'lucide-react';
-import { vectorVaultService } from '../../services/vectorVaultService';
+import vectorVaultService from '../../services/vectorVaultService';
 import { KnowledgeBase } from './types';
 
 interface VectorBaseSelectorProps {

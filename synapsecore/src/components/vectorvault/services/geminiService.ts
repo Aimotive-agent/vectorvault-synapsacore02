@@ -6,7 +6,7 @@ import { ChatMessage as SynapseCoreChatMessage } from '@/types/mcp';
 export class GeminiService {
   // Hardcoded API key for VectorVault app only
   private apiKey: string = 'REDACTED_GEMINI_API_KEY';
-  private model = 'gemini-1.5-flash-latest';
+  private model = 'gemini-1.5-flash';
   private baseUrl: string = 'https://generativelanguage.googleapis.com/v1/models';
 
   /**
@@ -37,40 +37,54 @@ export class GeminiService {
       
       console.log('geminiService: Sending request to URL:', url);
 
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        }
+      };
+      
+      console.log('geminiService: Request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('geminiService: Response status:', response.status);
+      console.log('geminiService: Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('geminiService: API error response:', errorText);
+        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
       const data = await response.json();
-      console.log('geminiService: Received response from API:', data);
+      console.log('geminiService: Received response from API:', JSON.stringify(data, null, 2));
 
       if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
         const responseText = data.candidates[0].content.parts[0].text;
         console.log('geminiService: Extracted response text:', responseText);
         return responseText;
-      } else  
-      console.warn('Received an empty or invalid response from the API:', data);
-      return 'I apologize, but I received an empty response. Please try again.';
+      } else {
+        console.warn('Received an empty or invalid response from the API:', data);
+        return 'I apologize, but I received an empty response. Please try again.';
+      }
     } catch (error) {
       console.error('Error generating response:', error);
       throw error;

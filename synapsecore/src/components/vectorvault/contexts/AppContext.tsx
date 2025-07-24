@@ -25,6 +25,8 @@ interface AppContextType {
     documents: Document[];
     apiKeys: ApiKey[];
     documentProgress: DocumentProgress;
+    selectedKbId: string;
+    setSelectedKbId: (kbId: string) => void;
     addKnowledgeBase: (name: string, description?: string) => Promise<KnowledgeBase>;
     deleteKnowledgeBase: (knowledgeBaseId: string) => Promise<boolean>;
     addDocument: (doc: Omit<Document, 'id' | 'created_at' | 'status' | 'vector_count'>, tempId: string) => Promise<void>;
@@ -44,6 +46,7 @@ export const AppProvider: FC<{children: ReactNode}> = ({ children }) => {
     const [documents, setDocuments] = useState<Document[]>(() => getStoredItem('documents', []));
     const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => getStoredItem('apiKeys', []));
     const [documentProgress, setDocumentProgress] = useState<DocumentProgress>({});
+    const [selectedKbId, setSelectedKbId] = useState<string>('');
 
     useEffect(() => { window.localStorage.setItem('knowledgeBases', JSON.stringify(knowledgeBases)); }, [knowledgeBases]);
     useEffect(() => { window.localStorage.setItem('documents', JSON.stringify(documents)); }, [documents]);
@@ -155,6 +158,8 @@ export const AppProvider: FC<{children: ReactNode}> = ({ children }) => {
         documents,
         apiKeys,
         documentProgress,
+        selectedKbId,
+        setSelectedKbId,
         addKnowledgeBase,
         deleteKnowledgeBase,
         addDocument,
