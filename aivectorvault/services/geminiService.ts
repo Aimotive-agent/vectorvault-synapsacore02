@@ -138,12 +138,18 @@ export const startChatSession = (knowledgeBaseName: string) => {
 };
 
 export const sendMessageInChat = async (message: string, kbId: string, documentContext: Document[]): Promise<string> => {
+    console.log('sendMessageInChat called with:', { message, kbId, documentCount: documentContext.length });
+    console.log('Chat instance exists:', !!chatInstance, 'Current KB name:', currentChatKbName);
+    
     if (!chatInstance || !currentChatKbName) {
+        console.log('Chat session not started - returning error message');
         return "Chat session not started or AI service is unavailable. Please select a knowledge base first.";
     }
 
     try {
         const relevantDocs = findRelevantDocuments(message, currentChatKbName, documentContext, kbId);
+        console.log('Found relevant documents:', relevantDocs.length);
+        
         const contextText = relevantDocs.length > 0
             ? relevantDocs.map(doc => `Document: ${doc.name}\nContent: ${doc.content || 'No content available for this document.'}`).join('\n\n')
             : "No relevant documents were found for this query.";
@@ -156,7 +162,12 @@ ${contextText}
 
 User Message: "${message}"
 `;
+        
+        console.log('Full message length:', fullMessage.length);
+        console.log('Full message preview:', fullMessage.substring(0, 200) + '...');
+        
         const response: GenerateContentResponse = await chatInstance.sendMessage({ message: fullMessage });
+        console.log('Received response from Gemini:', response.text);
         return response.text;
 
     } catch (error) {
