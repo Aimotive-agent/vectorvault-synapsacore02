@@ -1,72 +1,197 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { mcpClient, MCPTool as SDKMCPTool, MCPConnectionResult } from '../services/mcpClient';
 import { MCPServer, MCPTool } from '@/types/mcp';
 
+// Custom hook for managing MCP servers using the official MCP SDK
 export const useMCPServers = () => {
   const [servers, setServers] = useState<MCPServer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [discoveredTools, setDiscoveredTools] = useState<MCPTool[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Load servers from localStorage on mount
   useEffect(() => {
+    const loadServers = () => {
+      try {
+        const savedServers = localStorage.getItem('mcpServers');
+        if (savedServers) {
+          const parsedServers = JSON.parse(savedServers);
+          console.log('📂 Loaded servers from localStorage:', parsedServers);
+          setServers(parsedServers);
+          
+          // Aggregate tools from all loaded servers
+          const allTools = parsedServers.reduce((acc: MCPTool[], server: MCPServer) => {
+            return [...acc, ...(server.tools || [])];
+          }, []);
+          setDiscoveredTools(allTools);
+        }
+      } catch (error) {
+        console.error('❌ Error loading servers from localStorage:', error);
+      }
+    };
+
     loadServers();
   }, []);
 
-  const loadServers = async () => {
+  // Save servers to localStorage whenever servers change
+  const saveServers = useCallback((newServers: MCPServer[]) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Fallback to localStorage for unauthenticated users
-        console.log('No authenticated user, loading servers from localStorage');
-        const storedServers = localStorage.getItem('mcp_servers');
-        if (storedServers) {
-          const parsedServers = JSON.parse(storedServers);
-          const mcpServers: MCPServer[] = parsedServers.map((server: any) => ({
-            ...server,
-            lastConnected: server.lastConnected ? new Date(server.lastConnected) : new Date(),
-          }));
-          setServers(mcpServers);
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('mcp_servers')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      if (data) {
-        const mcpServers: MCPServer[] = data.map(server => ({
-          id: server.id,
-          name: server.name,
-          url: server.url,
-          description: server.description,
-          status: server.status as 'connected' | 'error' | 'disconnected',
-          tools: Array.isArray(server.tools) ? server.tools as any[] : [],
-          lastConnected: new Date(server.last_connected),
-        }));
-        setServers(mcpServers);
-      }
+      localStorage.setItem('mcpServers', JSON.stringify(newServers));
+      console.log('💾 Saved servers to localStorage:', newServers);
     } catch (error) {
-      console.error('Error loading MCP servers:', error);
-      // Fallback to localStorage on error
-      const storedServers = localStorage.getItem('mcp_servers');
-      if (storedServers) {
-        const parsedServers = JSON.parse(storedServers);
-        const mcpServers: MCPServer[] = parsedServers.map((server: any) => ({
-          ...server,
-          lastConnected: server.lastConnected ? new Date(server.lastConnected) : new Date(),
+      console.error('❌ Error saving servers to localStorage:', error);
+    }
+  }, []);
+
+  // MCP tool discovery using official SDK (based on Genspark's working implementation)
+  const discoverTools = async (serverUrl: string): Promise<MCPTool[]> => {
+    console.log(`🔍 Discovering tools using MCP SDK for: "${serverUrl}"`);
+    console.log(`🔍 Server URL type: ${typeof serverUrl}, length: ${serverUrl?.length}`);
+    
+    // Validate server URL
+    if (!serverUrl || typeof serverUrl !== 'string' || serverUrl.trim() === '') {
+      console.error('❌ Invalid server URL provided:', serverUrl);
+      throw new Error('Invalid server URL provided');
+    }
+    
+    const cleanUrl = serverUrl.trim();
+    console.log(`🔍 Using clean URL with MCP SDK: "${cleanUrl}"`);
+    
+    try {
+      // Use the MCP SDK client to connect and discover tools
+      const result: MCPConnectionResult = await mcpClient.connectToMCP(cleanUrl, `server-${Date.now()}`);
+      
+      if (result.success && result.tools) {
+        console.log(`🎉 MCP SDK successfully discovered ${result.tools.length} tools!`);
+        
+        // Convert SDK tools to our MCPTool format
+        const convertedTools: MCPTool[] = result.tools.map((tool: SDKMCPTool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          category: tool.category || 'MCP Tool'
         }));
-        setServers(mcpServers);
+        
+        return convertedTools;
+      } else {
+        console.error('❌ MCP SDK connection failed:', result.error);
+        throw new Error(result.error || 'Failed to connect to MCP server');
       }
+    } catch (error: any) {
+      console.error('❌ MCP SDK discovery error:', error);
+      throw new Error(`MCP discovery failed: ${error.message}`);
+    }
+  };
+
+  // Add a new MCP server
+  const addServer = async (serverData: { name: string; url: string; description?: string }) => {
+    const { name, url, description } = serverData;
+    console.log(`➕ Adding MCP server: ${name} at ${url}`);
+    setIsLoading(true);
+
+    try {
+      // Discover tools using MCP SDK
+      const tools = await discoverTools(url);
+      
+      const newServer: MCPServer = {
+        id: `server-${Date.now()}`,
+        name,
+        url,
+        description: description || '',
+        status: 'connected',
+        tools,
+        lastConnected: new Date()
+      };
+
+      const updatedServers = [...servers, newServer];
+      setServers(updatedServers);
+      saveServers(updatedServers);
+
+      // Update discovered tools
+      const allTools = updatedServers.reduce((acc: MCPTool[], server: MCPServer) => {
+        return [...acc, ...(server.tools || [])];
+      }, []);
+      setDiscoveredTools(allTools);
+
       toast({
-        title: "Error",
-        description: "Failed to load MCP servers, using local storage",
+        title: "Server Connected",
+        description: `Successfully connected to ${name} and discovered ${tools.length} tools.`,
+      });
+
+      console.log(`✅ Successfully added server: ${name} with ${tools.length} tools`);
+      return newServer;
+    } catch (error: any) {
+      console.error(`❌ Failed to add server ${name}:`, error);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message || `Failed to connect to ${name}`,
+        variant: "destructive",
+      });
+      
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh an existing server
+  const refreshServer = async (serverId: string) => {
+    console.log(`🔄 Refreshing server: ${serverId}`);
+    setIsLoading(true);
+
+    try {
+      const serverToRefresh = servers.find(s => s.id === serverId);
+      if (!serverToRefresh) {
+        throw new Error('Server not found');
+      }
+
+      // Rediscover tools using MCP SDK
+      const tools = await discoverTools(serverToRefresh.url);
+      
+      const updatedServers = servers.map(server => 
+        server.id === serverId 
+          ? { 
+              ...server, 
+              tools, 
+              status: 'connected' as const,
+              lastConnected: new Date() 
+            }
+          : server
+      );
+
+      setServers(updatedServers);
+      saveServers(updatedServers);
+
+      // Update discovered tools
+      const allTools = updatedServers.reduce((acc: MCPTool[], server: MCPServer) => {
+        return [...acc, ...(server.tools || [])];
+      }, []);
+      setDiscoveredTools(allTools);
+
+      toast({
+        title: "Server Refreshed",
+        description: `Successfully refreshed ${serverToRefresh.name} and discovered ${tools.length} tools.`,
+      });
+
+      console.log(`✅ Successfully refreshed server: ${serverToRefresh.name} with ${tools.length} tools`);
+    } catch (error: any) {
+      console.error(`❌ Failed to refresh server ${serverId}:`, error);
+      
+      // Mark server as disconnected
+      const updatedServers = servers.map(server => 
+        server.id === serverId 
+          ? { ...server, status: 'disconnected' as const }
+          : server
+      );
+      setServers(updatedServers);
+      saveServers(updatedServers);
+
+      toast({
+        title: "Refresh Failed",
+        description: error.message || "Failed to refresh server",
         variant: "destructive",
       });
     } finally {
@@ -74,391 +199,51 @@ export const useMCPServers = () => {
     }
   };
 
-  const saveServer = async (server: MCPServer) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to save servers",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const serverData = {
-        id: server.id,
-        user_id: user.id,
-        name: server.name,
-        url: server.url,
-        description: server.description,
-        status: server.status,
-        tools: server.tools as any,
-        last_connected: server.lastConnected.toISOString(),
-      };
-
-      const { error } = await supabase
-        .from('mcp_servers')
-        .upsert(serverData, { onConflict: 'id' });
-
-      if (error) throw error;
-
-      // Update local state
-      setServers(prev => {
-        const existingIndex = prev.findIndex(s => s.id === server.id);
-        if (existingIndex >= 0) {
-          const updated = [...prev];
-          updated[existingIndex] = server;
-          return updated;
-        } else {
-          return [...prev, server];
-        }
-      });
-
-    } catch (error) {
-      console.error('Error saving MCP server:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save MCP server",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeServer = async (serverId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to remove servers",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('mcp_servers')
-        .delete()
-        .eq('id', serverId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setServers(prev => prev.filter(s => s.id !== serverId));
-
-    } catch (error) {
-      console.error('Error removing MCP server:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove MCP server",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Real MCP tool discovery function (moved from Dashboard.tsx)
-  const discoverTools = async (serverUrl: string): Promise<MCPTool[]> => {
-    console.log(`🔍 Discovering tools for: ${serverUrl}`);
+  // Remove a server
+  const removeServer = useCallback((serverId: string) => {
+    console.log(`🗑️ Removing server: ${serverId}`);
     
-    const discoveryMethods = [
-      // Method 1: MCP protocol with proper headers
-      async () => {
-        console.log(`🌐 Trying MCP protocol with proper headers...`);
-        const response = await fetch(serverUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json, text/event-stream'
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'tools/list',
-            params: {}
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType?.includes('text/event-stream')) {
-          const text = await response.text();
-          const lines = text.split('\n');
-          let jsonData = null;
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const dataStr = line.substring(6).trim();
-                if (dataStr && dataStr !== '[DONE]') {
-                  jsonData = JSON.parse(dataStr);
-                  break;
-                }
-              } catch (e) {
-                continue;
-              }
-            }
-          }
-          
-          if (jsonData) {
-            return jsonData;
-          } else {
-            throw new Error('No valid JSON data found in SSE response');
-          }
-        } else {
-          const data = await response.json();
-          return data;
-        }
-      },
-      
-      // Method 2: Direct GET request
-      async () => {
-        console.log(`🌐 Trying direct GET request...`);
-        const response = await fetch(serverUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json, text/event-stream',
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('text/event-stream')) {
-          const text = await response.text();
-          const lines = text.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const dataStr = line.substring(6).trim();
-                if (dataStr && dataStr !== '[DONE]') {
-                  return JSON.parse(dataStr);
-                }
-              } catch (e) {
-                continue;
-              }
-            }
-          }
-          throw new Error('No valid JSON data found in SSE response');
-        } else {
-          const data = await response.json();
-          return data;
-        }
-      }
-    ];
+    const updatedServers = servers.filter(server => server.id !== serverId);
+    setServers(updatedServers);
+    saveServers(updatedServers);
 
-    // Try each method in sequence
-    for (let i = 0; i < discoveryMethods.length; i++) {
-      try {
-        console.log(`🔄 Trying discovery method ${i + 1}/${discoveryMethods.length}...`);
-        const data = await discoveryMethods[i]();
-        const discoveredTools = parseToolsResponse(data);
-        
-        if (discoveredTools.length > 0) {
-          console.log(`✅ Successfully found ${discoveredTools.length} tools using method ${i + 1}`);
-          return discoveredTools;
-        } else {
-          console.log(`⚠️ Method ${i + 1} returned no tools`);
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        console.log(`❌ Method ${i + 1} failed: ${errorMsg}`);
-      }
-    }
+    // Update discovered tools
+    const allTools = updatedServers.reduce((acc: MCPTool[], server: MCPServer) => {
+      return [...acc, ...(server.tools || [])];
+    }, []);
+    setDiscoveredTools(allTools);
+
+    // Disconnect from MCP client if needed
+    mcpClient.disconnectServer(serverId);
+
+    toast({
+      title: "Server Removed",
+      description: "Server has been removed successfully.",
+    });
+  }, [servers, saveServers, toast]);
+
+  // Execute a tool using MCP SDK
+  const executeTool = async (toolName: string, parameters: any) => {
+    console.log(`🔧 Executing tool: ${toolName} with parameters:`, parameters);
     
-    throw new Error('Could not discover tools from the provided server URL. Please check the server URL and try again.');
-  };
-
-  // Parse tools response (moved from Dashboard.tsx)
-  const parseToolsResponse = (data: any): MCPTool[] => {
-    let discoveredTools: MCPTool[] = [];
-    
-    if (data.tools && Array.isArray(data.tools)) {
-      discoveredTools = data.tools;
-    } else if (data.result && Array.isArray(data.result.tools)) {
-      discoveredTools = data.result.tools;
-    } else if (Array.isArray(data)) {
-      discoveredTools = data;
-    } else if (data.result && Array.isArray(data.result)) {
-      discoveredTools = data.result;
-    }
-    
-    return discoveredTools.map(tool => ({
-      name: tool.name || 'unnamed_tool',
-      description: tool.description || 'No description available',
-      category: tool.category || 'utility',
-      parameters: tool.parameters || tool.inputSchema,
-      inputSchema: tool.inputSchema,
-      outputSchema: tool.outputSchema
-    }));
-  };
-
-  // Add missing addServer function
-  const addServer = async (serverConfig: { name: string; url: string; description?: string }) => {
     try {
-      console.log('Adding server:', serverConfig);
-      
-      // Create new server object
-      const newServer: MCPServer = {
-        id: `server-${Date.now()}`,
-        name: serverConfig.name,
-        url: serverConfig.url,
-        description: serverConfig.description || '',
-        status: 'connecting',
-        tools: [],
-        lastConnected: new Date(),
-      };
-
-      // Update local state immediately
-      setServers(prev => [...prev, newServer]);
-
-      // Connect to real MCP server and discover tools
-      try {
-        console.log('🔍 Discovering tools for MCP server:', newServer.url);
-        const discoveredTools = await discoverTools(newServer.url);
-        
-        newServer.tools = discoveredTools;
-        newServer.status = 'connected';
-        newServer.lastConnected = new Date();
-        
-        console.log('✅ MCP server connected with', discoveredTools.length, 'real tools');
-        console.log('🔧 Tools discovered:', discoveredTools.map(t => t.name).join(', '));
-        
-        // Update state with connected server
-        setServers(prev => prev.map(s => s.id === newServer.id ? newServer : s));
-        
-        // Save to persistence
-        await saveServerToPersistence(newServer);
-        
-        toast({
-          title: "Server Connected",
-          description: `Successfully connected to ${newServer.name} with ${discoveredTools.length} tools`,
-          variant: "default",
-        });
-        
-      } catch (connectionError) {
-        console.error('Failed to connect to server:', connectionError);
-        newServer.status = 'error';
-        setServers(prev => prev.map(s => s.id === newServer.id ? newServer : s));
-        
-        toast({
-          title: "Connection Failed",
-          description: `Failed to connect to ${newServer.name}`,
-          variant: "destructive",
-        });
-      }
-      
-    } catch (error) {
-      console.error('Error adding server:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add server",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Add missing refreshServer function
-  const refreshServer = async (serverId: string) => {
-    try {
-      console.log('Refreshing server:', serverId);
-      
-      const server = servers.find(s => s.id === serverId);
-      if (!server) {
-        toast({
-          title: "Error",
-          description: "Server not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update status to connecting
-      setServers(prev => prev.map(s => 
-        s.id === serverId ? { ...s, status: 'connecting' as const } : s
-      ));
-
-      // Mock refresh - replace with actual MCP refresh
-      setTimeout(() => {
-        const updatedServer = {
-          ...server,
-          status: 'connected' as const,
-          lastConnected: new Date(),
-          tools: server.tools // Keep existing tools
-        };
-        
-        setServers(prev => prev.map(s => s.id === serverId ? updatedServer : s));
-        saveServerToPersistence(updatedServer);
-        
-        toast({
-          title: "Server Refreshed",
-          description: `Successfully refreshed ${server.name}`,
-          variant: "default",
-        });
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error refreshing server:', error);
-      setServers(prev => prev.map(s => 
-        s.id === serverId ? { ...s, status: 'error' as const } : s
-      ));
-      toast({
-        title: "Error",
-        description: "Failed to refresh server",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Helper function to save server to appropriate persistence
-  const saveServerToPersistence = async (server: MCPServer) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Save to Supabase if authenticated
-        const serverData = {
-          id: server.id,
-          user_id: user.id,
-          name: server.name,
-          url: server.url,
-          description: server.description,
-          status: server.status,
-          tools: server.tools as any,
-          last_connected: server.lastConnected.toISOString(),
-        };
-
-        const { error } = await supabase
-          .from('mcp_servers')
-          .upsert(serverData, { onConflict: 'id' });
-
-        if (error) throw error;
-      } else {
-        // Save to localStorage if not authenticated
-        const currentServers = servers.map(s => s.id === server.id ? server : s);
-        localStorage.setItem('mcp_servers', JSON.stringify(currentServers));
-      }
-    } catch (error) {
-      console.error('Error saving server to persistence:', error);
-      // Always save to localStorage as fallback
-      const currentServers = servers.map(s => s.id === server.id ? server : s);
-      localStorage.setItem('mcp_servers', JSON.stringify(currentServers));
+      const result = await mcpClient.executeTool(toolName, parameters);
+      console.log(`✅ Tool execution result:`, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Tool execution failed:`, error);
+      throw error;
     }
   };
 
   return {
     servers,
+    discoveredTools,
     isLoading,
-    saveServer,
-    removeServer,
     addServer,
     refreshServer,
-    setServers,
+    removeServer,
+    executeTool,
+    discoverTools
   };
 };

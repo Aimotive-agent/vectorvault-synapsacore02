@@ -25,9 +25,7 @@ export const MCPWorkbench = () => {
     isLoading: serversLoading, 
     addServer, 
     removeServer, 
-    refreshServer, 
-    isAdding: isAddingServer, 
-    refreshingServer 
+    refreshServer
   } = useMCPServers();
   
   const { settings: aiSettings, saveSettings, setSettings: setAiSettings } = useAISettings();
@@ -85,8 +83,9 @@ export const MCPWorkbench = () => {
     setLogs(prevLogs => [newLog, ...prevLogs]);
   }, []);
 
-  const handleAddServer = async (url: string) => {
-    await addServer(url, (log) => addLog(log.message, log.type, log.icon, log.category));
+  const handleAddServer = async (name: string, url: string, description?: string) => {
+    console.log('🔧 MCPWorkbench handleAddServer called with:', { name, url, description });
+    await addServer({ name, url, description });
   };
 
   const handleRemoveServer = async (serverId: string) => {
@@ -223,13 +222,12 @@ export const MCPWorkbench = () => {
           <TabsContent value="servers" className="space-y-6">
             <MCPServerForm 
               onAddServer={handleAddServer} 
-              isLoading={isAddingServer}
+              isLoading={serversLoading}
             />
             <ConnectedServers 
               servers={servers}
               onRefreshServer={handleRefreshServer}
               onRemoveServer={handleRemoveServer}
-              isRefreshing={refreshingServer}
             />
           </TabsContent>
 

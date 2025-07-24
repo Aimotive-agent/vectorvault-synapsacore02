@@ -16,12 +16,10 @@ const Dashboard = () => {
 
   const { 
     servers, 
-    saveServer, 
     removeServer, 
     addServer,
     refreshServer,
-    isLoading,
-    setServers
+    isLoading
   } = useMCPServers();
 
   // Aggregate tools from all connected servers
@@ -219,15 +217,24 @@ const Dashboard = () => {
     }));
   };
 
-  const handleAddServer = async (name: string, url: string, description?: string) => {
+  const handleAddServer = async (nameOrData: string | { name: string; url: string; description?: string }, url?: string, description?: string) => {
     setIsAddingServer(true);
-    addLog(`📝 Adding MCP server: ${name} (${url})`, 'info', '📝', 'Server Management');
+    
+    // Handle both object and individual parameter patterns
+    let serverData: { name: string; url: string; description?: string };
+    if (typeof nameOrData === 'object') {
+      serverData = nameOrData;
+    } else {
+      serverData = { name: nameOrData, url: url!, description };
+    }
+    
+    addLog(`📝 Adding MCP server: ${serverData.name} (${serverData.url})`, 'info', '📝', 'Server Management');
     
     try {
       // Use the new addServer function from useMCPServers hook
-      await addServer({ name, url, description });
+      await addServer(serverData);
       
-      addLog(`✅ Server added successfully: ${name}`, 'success', '✅', 'Server Management');
+      addLog(`✅ Server added successfully: ${serverData.name}`, 'success', '✅', 'Server Management');
       
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
