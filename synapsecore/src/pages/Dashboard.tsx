@@ -26,10 +26,20 @@ const Dashboard = () => {
 
   // Aggregate tools from all connected servers
   useEffect(() => {
-    console.log('Dashboard: Aggregating tools from servers:', servers.length);
+    console.log('🔧 Dashboard: Starting tool aggregation...');
+    console.log('🔧 Dashboard: Servers data:', servers);
+    console.log('🔧 Dashboard: Number of servers:', servers.length);
+    
     const allTools: MCPTool[] = [];
     
-    servers.forEach(server => {
+    servers.forEach((server, index) => {
+      console.log(`🔧 Dashboard: Processing server ${index + 1}:`, {
+        name: server.name,
+        id: server.id,
+        toolsCount: server.tools?.length || 0,
+        toolsData: server.tools
+      });
+      
       if (server.tools && server.tools.length > 0) {
         const serverTools = server.tools.map(tool => ({
           ...tool,
@@ -38,12 +48,21 @@ const Dashboard = () => {
           category: tool.category || 'utility'
         }));
         allTools.push(...serverTools);
-        console.log(`Dashboard: Added ${serverTools.length} tools from server ${server.name}`);
+        console.log(`🔧 Dashboard: Added ${serverTools.length} tools from server ${server.name}`);
+        console.log('🔧 Dashboard: Sample tool:', serverTools[0]);
+      } else {
+        console.log(`🔧 Dashboard: Server ${server.name} has no tools or empty tools array`);
       }
     });
     
-    console.log('Dashboard: Total aggregated tools:', allTools.length);
+    console.log('🔧 Dashboard: Final aggregated tools:', allTools.length);
+    console.log('🔧 Dashboard: All tools data:', allTools);
     setTools(allTools);
+    
+    // Force re-render by logging current tools state
+    setTimeout(() => {
+      console.log('🔧 Dashboard: Tools state after setState:', allTools.length);
+    }, 100);
   }, [servers]);
   
   const [isAddingServer, setIsAddingServer] = useState(false);
@@ -292,6 +311,13 @@ const Dashboard = () => {
     tools: tools.length,
     logs: logs.length,
   };
+  
+  // Debug: Log current state
+  console.log('🔧 Dashboard render: Current state:', {
+    serversCount: servers.length,
+    toolsCount: tools.length,
+    logsCount: logs.length
+  });
 
   return (
     <div className="h-full flex flex-col">

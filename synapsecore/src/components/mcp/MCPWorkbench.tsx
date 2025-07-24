@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -31,6 +31,47 @@ export const MCPWorkbench = () => {
   } = useMCPServers();
   
   const { settings: aiSettings, saveSettings, setSettings: setAiSettings } = useAISettings();
+
+  // Aggregate tools from all connected servers
+  useEffect(() => {
+    console.log('🔧 MCPWorkbench: Starting tool aggregation...');
+    console.log('🔧 MCPWorkbench: Servers data:', servers);
+    console.log('🔧 MCPWorkbench: Number of servers:', servers.length);
+    
+    const allTools: MCPTool[] = [];
+    
+    servers.forEach((server, index) => {
+      console.log(`🔧 MCPWorkbench: Processing server ${index + 1}:`, {
+        name: server.name,
+        id: server.id,
+        toolsCount: server.tools?.length || 0,
+        toolsData: server.tools
+      });
+      
+      if (server.tools && server.tools.length > 0) {
+        const serverTools = server.tools.map(tool => ({
+          ...tool,
+          serverUrl: server.url,
+          serverId: server.id,
+          category: tool.category || 'utility'
+        }));
+        allTools.push(...serverTools);
+        console.log(`🔧 MCPWorkbench: Added ${serverTools.length} tools from server ${server.name}`);
+        console.log('🔧 MCPWorkbench: Sample tool:', serverTools[0]);
+      } else {
+        console.log(`🔧 MCPWorkbench: Server ${server.name} has no tools or empty tools array`);
+      }
+    });
+    
+    console.log('🔧 MCPWorkbench: Final aggregated tools:', allTools.length);
+    console.log('🔧 MCPWorkbench: All tools data:', allTools);
+    setTools(allTools);
+    
+    // Force re-render by logging current tools state
+    setTimeout(() => {
+      console.log('🔧 MCPWorkbench: Tools state after setState:', allTools.length);
+    }, 100);
+  }, [servers]);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info', icon?: string, category?: string) => {
     const newLog: LogEntry = {
@@ -137,6 +178,13 @@ export const MCPWorkbench = () => {
     chat: 0, // Dynamic badge, e.g., for unread messages
     logs: logs.length,
   };
+  
+  // Debug: Log current state
+  console.log('🔧 MCPWorkbench render: Current state:', {
+    serversCount: servers.length,
+    toolsCount: tools.length,
+    logsCount: logs.length
+  });
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background-dark">
