@@ -3,6 +3,7 @@ import { AppContext } from './contexts/AppContext';
 import { ChatMessage } from './types';
 import { BotIcon, SendIcon, DatabaseIcon } from './CustomIcons';
 import vectorRetrievalService from '../../services/vectorRetrievalService';
+import { vectorVaultService } from '../../services/vectorVaultService';
 import geminiService from './services/geminiService';
 
 const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
@@ -48,11 +49,25 @@ const ChatView: React.FC = () => {
         setIsLoading(true);
 
         try {
+            console.log('ChatView: Starting RAG prompt generation with:', { selectedKbId, input });
+            
+            // Check if there are any documents in the selected knowledge base
+            const allDocuments = await vectorVaultService.getDocuments();
+            const kbDocuments = allDocuments.filter(doc => doc.knowledgeBaseId === selectedKbId);
+            console.log('ChatView: Found', kbDocuments.length, 'documents in knowledge base', selectedKbId);
+            if (kbDocuments.length > 0) {
+                console.log('ChatView: Sample document:', { name: kbDocuments[0].name, hasContent: !!kbDocuments[0].content, hasVectorData: !!kbDocuments[0].vectorData });
+            }
+            
             const ragPrompt = await vectorRetrievalService.generateRAGPrompt(
                 'Answer the following question based on the provided context.',
                 selectedKbId,
                 input
             );
+            
+            console.log('ChatView: Generated RAG prompt, length:', ragPrompt.length);
+            console.log('ChatView: RAG prompt preview:', ragPrompt.substring(0, 200) + '...');
+            
             const modelResponse = await geminiService.generateResponse(ragPrompt);
             const botMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: modelResponse };
             setMessages(prev => [...prev, botMessage]);
