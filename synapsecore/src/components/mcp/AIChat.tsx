@@ -35,9 +35,180 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const currentApiKey = settings.provider === 'openai' ? settings.apiKey : settings.openrouterApiKey;
+  const currentApiKey = settings.provider === 'openai' ? settings.openaiApiKey : settings.openrouterApiKey;
 
   const activeMessages = sessions.find(s => s.id === activeSessionId)?.messages || [];
+
+  // Dynamic AI response generation based on user-selected provider
+  const generateAIResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const { provider, selectedModel, temperature, maxTokens } = settings;
+    
+    switch (provider) {
+      case 'openai':
+        return await generateOpenAIResponse(prompt, settings);
+      case 'openrouter':
+        return await generateOpenRouterResponse(prompt, settings);
+      case 'gemini':
+        return await geminiService.generateResponse(prompt);
+      case 'anthropic':
+        return await generateAnthropicResponse(prompt, settings);
+      case 'deepseek':
+        return await generateDeepSeekResponse(prompt, settings);
+      case 'perplexity':
+        return await generatePerplexityResponse(prompt, settings);
+      case 'grok':
+        return await generateGrokResponse(prompt, settings);
+      default:
+        throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+  };
+
+  // OpenAI API call
+  const generateOpenAIResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response received';
+  };
+
+  // OpenRouter API call
+  const generateOpenRouterResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.openrouterApiKey}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'SynapseCore AI Chat'
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenRouter API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response received';
+  };
+
+  // Anthropic API call
+  const generateAnthropicResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.anthropicApiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        max_tokens: settings.maxTokens,
+        temperature: settings.temperature,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.content[0]?.text || 'No response received';
+  };
+
+  // DeepSeek API call
+  const generateDeepSeekResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.deepseekApiKey}`
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response received';
+  };
+
+  // Perplexity API call
+  const generatePerplexityResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.perplexityApiKey}`
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response received';
+  };
+
+  // Grok API call
+  const generateGrokResponse = async (prompt: string, settings: AISettings): Promise<string> => {
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.grokApiKey}`
+      },
+      body: JSON.stringify({
+        model: settings.selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Grok API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'No response received';
+  };
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -83,8 +254,8 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       };
       setMessages(prev => [...prev, thinkingMessage]);
 
-      // Get AI response using augmented prompt
-      const responseText = await geminiService.generateResponse(augmentedPrompt);
+      // Get AI response using user-selected provider and model
+      const responseText = await generateAIResponse(augmentedPrompt, settings);
       
       // Replace thinking message with actual response
       const botMessage: ChatMessage = {
