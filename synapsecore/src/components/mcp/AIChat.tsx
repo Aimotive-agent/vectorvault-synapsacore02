@@ -15,6 +15,7 @@ import SaveToVaultButton from '../vectorvault/SaveToVaultButton';
 import { AppContext } from '../vectorvault/contexts/AppContext';
 import vectorRetrievalService from '@/services/vectorRetrievalService';
 import geminiService from '../vectorvault/services/geminiService';
+import { useMCPServers } from '@/hooks/useMCPServers';
 
 interface AIChatProps {
   servers: MCPServer[];
@@ -33,6 +34,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
   const { sessions, currentSessionId: activeSessionId, createSession, loadMessages: switchSession, messages, setMessages, saveMessage } = useChatSessions();
   const { selectedKbId, setSelectedKbId } = useContext(AppContext);
   const { toast } = useToast();
+  const { executeTool } = useMCPServers();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const currentApiKey = settings.provider === 'openai' ? settings.openaiApiKey : settings.openrouterApiKey;
@@ -234,12 +236,24 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
     try {
       let augmentedPrompt = userMessage.content;
+      
+      // Add MCP tools context to the prompt
+      if (tools && tools.length > 0) {
+        const toolsContext = `\n\n=== AVAILABLE MCP TOOLS ===\n${tools.map(tool => {
+          const schemaStr = tool.inputSchema ? JSON.stringify(tool.inputSchema, null, 2) : 'No schema available';
+          return `\n**${tool.name}**\n- Description: ${tool.description}\n- Category: ${tool.category}\n- Input Schema: ${schemaStr}`;
+        }).join('\n')}\n\n=== TOOL USAGE INSTRUCTIONS ===\nYou have full access to these ${tools.length} MCP tools. When a user's request can be fulfilled using any of these tools, you should:\n1. Explain which tool(s) would be helpful\n2. Describe what the tool will do\n3. Ask for any required parameters if not provided\n4. Let the user know they can execute the tool through this chat interface\n\nThese tools can help with file operations, data processing, API calls, and various other tasks. Feel free to suggest their use when appropriate.`;
+        
+        augmentedPrompt = userMessage.content + toolsContext;
+        onLog(`Added ${tools.length} MCP tools with full schemas to context.`, 'info', '🔧');
+      }
+      
       if (selectedKbId) {
         onLog('Retrieving context from Vector Vault...', 'info', '🧠');
         augmentedPrompt = await vectorRetrievalService.generateRAGPrompt(
           settings.systemPrompt || 'You are a helpful AI assistant.',
           selectedKbId,
-          userMessage.content
+          augmentedPrompt
         );
         onLog('Generated RAG-enhanced prompt.', 'success', '🧠');
       }
