@@ -318,17 +318,17 @@ export const useMCPServers = () => {
       // Update local state immediately
       setServers(prev => [...prev, newServer]);
 
-      // Try to connect and discover tools using real MCP discovery
+      // Connect to real MCP server and discover tools
       try {
-        console.log('🔍 Starting real MCP tool discovery for:', newServer.url);
+        console.log('🔍 Discovering tools for MCP server:', newServer.url);
         const discoveredTools = await discoverTools(newServer.url);
         
         newServer.tools = discoveredTools;
         newServer.status = 'connected';
         newServer.lastConnected = new Date();
         
-        console.log('✅ Server connected successfully with', discoveredTools.length, 'real MCP tools');
-        console.log('🔧 Discovered tools:', discoveredTools.map(t => t.name).join(', '));
+        console.log('✅ MCP server connected with', discoveredTools.length, 'real tools');
+        console.log('🔧 Tools discovered:', discoveredTools.map(t => t.name).join(', '));
         
         // Update state with connected server
         setServers(prev => prev.map(s => s.id === newServer.id ? newServer : s));
