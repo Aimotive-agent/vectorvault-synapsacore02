@@ -7,9 +7,70 @@ import { vectorVaultService } from '../../services/vectorVaultService';
 import geminiService from './services/geminiService';
 import { useMCPServers } from '../../hooks/useMCPServers';
 import { MCPTool } from '../../types/mcp';
+import { Copy, Save } from 'lucide-react';
+import { Button } from '../ui/button';
+import { useToast } from '../ui/use-toast';
 
-const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
+const ChatBubble: React.FC<{ message: ChatMessage; selectedKbId: string; messages: ChatMessage[]; addDocument: any }> = ({ message, selectedKbId, messages, addDocument }) => {
     const isModel = message.role === 'model';
+    const { toast } = useToast();
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            toast({ title: 'Copied to clipboard!', className: 'bg-green-500 text-white' });
+        }, () => {
+            toast({ title: 'Failed to copy.', variant: 'destructive' });
+        });
+    };
+
+    const saveToVectorBase = async (message: ChatMessage) => {
+        if (!selectedKbId) {
+            toast({ title: 'No vector base selected', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            // Create a chat file with the conversation context
+            const messageIndex = messages.findIndex(m => m.id === message.id);
+            const userMessage = messages.slice(0, messageIndex).reverse().find(m => m.role === 'user');
+            const chatContent = `# AI Chat Session - ${new Date().toLocaleString()}
+
+## User Query:
+${userMessage?.content || 'N/A'}
+
+## AI Response:
+${message.content}
+
+---
+*Saved from VectorVault AI Chat*`;
+            
+            const fileName = `vectorvault-chat-${Date.now()}.md`;
+            const tempId = `temp_${Date.now()}`;
+            
+            // Save to the selected vector base using AppContext addDocument method
+            // This ensures the document appears in the Documents view immediately
+            await addDocument({
+                name: fileName,
+                content: chatContent,
+                type: 'MD',
+                knowledgeBaseId: selectedKbId
+            }, tempId);
+            
+            toast({ 
+                title: 'Saved to Vector Base!', 
+                description: `Chat saved as ${fileName}`,
+                className: 'bg-green-500 text-white' 
+            });
+        } catch (error) {
+            console.error('Error saving to vector base:', error);
+            toast({ 
+                title: 'Failed to save to vector base', 
+                description: error instanceof Error ? error.message : 'Unknown error',
+                variant: 'destructive' 
+            });
+        }
+    };
+
     return (
         <div className={`flex items-start gap-3 ${isModel ? '' : 'flex-row-reverse'}`}>
             <div className={`p-3 rounded-full flex-shrink-0 ${isModel ? 'bg-gray-700' : 'bg-brand-purple'}`}>
@@ -17,13 +78,23 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
             </div>
             <div className={`p-4 rounded-xl max-w-2xl ${isModel ? 'bg-gray-800 text-gray-300' : 'bg-brand-purple text-white'}`}>
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {isModel && (
+                    <div className="flex items-center justify-end gap-1 mt-2">
+                        <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => copyToClipboard(message.content)}>
+                            <Copy className="w-4 h-4 text-gray-400 hover:text-white" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => saveToVectorBase(message)}>
+                            <Save className="w-4 h-4 text-gray-400 hover:text-white" />
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
 const ChatView: React.FC = () => {
-    const { knowledgeBases } = useContext(AppContext);
+    const { knowledgeBases, addDocument } = useContext(AppContext);
     const { servers } = useMCPServers();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
@@ -155,7 +226,7 @@ const ChatView: React.FC = () => {
                         <p>Ask me anything about your documents.</p>
                     </div>
                 )}
-                {messages.map(msg => <ChatBubble key={msg.id} message={msg} />)}
+                {messages.map(msg => <ChatBubble key={msg.id} message={msg} selectedKbId={selectedKbId} messages={messages} addDocument={addDocument} />)}
                 {isLoading && (
                     <div className="flex items-start gap-3">
                         <div className="p-3 rounded-full bg-gray-700">

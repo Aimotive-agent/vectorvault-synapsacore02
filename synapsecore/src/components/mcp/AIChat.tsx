@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Send, Copy, Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User, Send, Copy, Check, Save } from 'lucide-react';
 import { BotIcon, Loader2Icon, BrainIcon } from './CustomMCPIcons';
 import { useToast } from '@/components/ui/use-toast';
 import { ChatMessage, MCPTool, MCPServer, AISettings, ToolCall, OpenAIModel, OpenRouterModel } from '@/types/mcp';
@@ -16,6 +16,7 @@ import { AppContext } from '../vectorvault/contexts/AppContext';
 import vectorRetrievalService from '@/services/vectorRetrievalService';
 import geminiService from '../vectorvault/services/geminiService';
 import { useMCPServers } from '@/hooks/useMCPServers';
+import { vectorVaultService } from '@/services/vectorVaultService';
 
 interface AIChatProps {
   servers: MCPServer[];
@@ -28,14 +29,16 @@ interface AIChatProps {
   isVectorVault?: boolean;
 }
 
-export const AIChat = ({ servers, tools, settings, onSettingsChange, availableModels, openrouterModels, onLog, isVectorVault = false }: AIChatProps) => {
+export const AIChat: React.FC<AIChatProps> = ({ servers, tools, settings, onSettingsChange, availableModels, openrouterModels, onLog, isVectorVault = false }) => {
+  const { toast } = useToast();
+  const { selectedKbId, setSelectedKbId, addDocument } = useContext(AppContext);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const { sessions, currentSessionId: activeSessionId, createSession, loadMessages: switchSession, messages, setMessages, saveMessage } = useChatSessions();
-  const { selectedKbId, setSelectedKbId } = useContext(AppContext);
-  const { toast } = useToast();
-  const { executeTool } = useMCPServers();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { executeTool } = useMCPServers();
+
+  const { sessions, currentSessionId: activeSessionId, createSession, loadMessages: switchSession, saveMessage } = useChatSessions();
 
   const currentApiKey = settings.provider === 'openai' ? settings.openaiApiKey : settings.openrouterApiKey;
 
@@ -355,6 +358,52 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
     });
   };
 
+  const saveToVectorBase = async (message: ChatMessage) => {
+    if (!selectedKbId) {
+      toast({ title: 'No vector base selected', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      // Create a chat file with the conversation context
+      const chatContent = `# AI Chat Session - ${new Date().toLocaleString()}
+
+## User Query:
+${messages.find(m => m.role === 'user' && m.timestamp <= message.timestamp)?.content || 'N/A'}
+
+## AI Response:
+${message.content}
+
+---
+*Saved from SynapseCore AI Chat*`;
+      
+      const fileName = `ai-chat-${Date.now()}.md`;
+      const tempId = `temp_${Date.now()}`;
+      
+      // Save to the selected vector base using AppContext addDocument method
+      // This ensures the document appears in the Documents view immediately
+      await addDocument({
+        name: fileName,
+        content: chatContent,
+        type: 'MD',
+        knowledgeBaseId: selectedKbId
+      }, tempId);
+      
+      toast({ 
+        title: 'Saved to Vector Base!', 
+        description: `Chat saved as ${fileName}`,
+        className: 'bg-green-500 text-white' 
+      });
+    } catch (error) {
+      console.error('Error saving to vector base:', error);
+      toast({ 
+        title: 'Failed to save to vector base', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-transparent font-sans">
       {/* Header */}
@@ -379,10 +428,15 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
                   <span className="text-xs text-gray-500">
                     {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
                   </span>
-                  {message.role === 'assistant' && !message.isError && (
-                    <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => copyToClipboard(message.content)}>
-                      <Copy className="w-4 h-4 text-gray-400 hover:text-white" />
-                    </Button>
+                  {message.role === 'assistant' && (
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => copyToClipboard(message.content)}>
+                        <Copy className="w-4 h-4 text-gray-400 hover:text-white" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => saveToVectorBase(message)}>
+                        <Save className="w-4 h-4 text-gray-400 hover:text-white" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
