@@ -32,6 +32,8 @@ export class GeminiService {
    */
   async generateResponse(prompt: string): Promise<string> {
     console.log('geminiService: Generating response for prompt:', prompt);
+    console.log('geminiService: Prompt length:', prompt.length);
+    console.log('geminiService: Prompt preview (first 200 chars):', prompt.substring(0, 200));
     try {
       const url = `${this.baseUrl}/${this.model}:generateContent?key=${this.apiKey}`;
       
