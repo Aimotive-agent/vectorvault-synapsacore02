@@ -36,6 +36,17 @@ export const useAISettings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // Fallback to localStorage for unauthenticated users
+        console.log('No authenticated user, loading AI settings from localStorage');
+        const storedSettings = localStorage.getItem('ai_settings');
+        if (storedSettings) {
+          const parsedSettings = JSON.parse(storedSettings);
+          setSettings(parsedSettings);
+          console.log('Loaded AI settings from localStorage:', parsedSettings);
+        } else {
+          console.log('No stored AI settings found, using defaults');
+          setSettings(DEFAULT_SETTINGS);
+        }
         setIsLoading(false);
         return;
       }
@@ -87,10 +98,14 @@ export const useAISettings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // Fallback to localStorage for unauthenticated users
+        console.log('No authenticated user, saving AI settings to localStorage');
+        localStorage.setItem('ai_settings', JSON.stringify(newSettings));
+        setSettings(newSettings);
+        console.log('AI settings saved to localStorage:', newSettings);
         toast({
-          title: "Authentication required",
-          description: "Please sign in to save settings",
-          variant: "destructive",
+          title: "Settings Saved",
+          description: "AI settings saved locally",
         });
         return;
       }
