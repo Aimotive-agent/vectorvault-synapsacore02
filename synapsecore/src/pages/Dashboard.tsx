@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,9 +18,33 @@ const Dashboard = () => {
     servers, 
     saveServer, 
     removeServer, 
+    addServer,
+    refreshServer,
     isLoading,
     setServers
   } = useMCPServers();
+
+  // Aggregate tools from all connected servers
+  useEffect(() => {
+    console.log('Dashboard: Aggregating tools from servers:', servers.length);
+    const allTools: MCPTool[] = [];
+    
+    servers.forEach(server => {
+      if (server.tools && server.tools.length > 0) {
+        const serverTools = server.tools.map(tool => ({
+          ...tool,
+          serverUrl: server.url,
+          serverId: server.id,
+          category: tool.category || 'utility'
+        }));
+        allTools.push(...serverTools);
+        console.log(`Dashboard: Added ${serverTools.length} tools from server ${server.name}`);
+      }
+    });
+    
+    console.log('Dashboard: Total aggregated tools:', allTools.length);
+    setTools(allTools);
+  }, [servers]);
   
   const [isAddingServer, setIsAddingServer] = useState(false);
   const [refreshingServer, setRefreshingServer] = useState<string | undefined>();
@@ -181,30 +205,10 @@ const Dashboard = () => {
     addLog(`📝 Adding MCP server: ${name} (${url})`, 'info', '📝', 'Server Management');
     
     try {
-      const discoveredTools = await discoverTools(url);
+      // Use the new addServer function from useMCPServers hook
+      await addServer({ name, url, description });
       
-      const newServer = {
-        id: crypto.randomUUID(),
-        name,
-        url,
-        description,
-        status: 'connected' as const,
-        tools: discoveredTools,
-        lastConnected: new Date(),
-      };
-      
-      await saveServer(newServer);
-      setTools(prev => [...prev, ...discoveredTools.map((tool: any) => ({ 
-        ...tool, 
-        serverUrl: url, 
-        serverId: newServer.id 
-      }))]);
-      
-      addLog(`✅ Server added successfully: ${name} with ${discoveredTools.length} tools`, 'success', '✅', 'Server Management');
-      toast({
-        title: "Server Connected",
-        description: `Successfully connected to ${name} with ${discoveredTools.length} tools`,
-      });
+      addLog(`✅ Server added successfully: ${name}`, 'success', '✅', 'Server Management');
       
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -254,43 +258,14 @@ const Dashboard = () => {
     addLog(`🔄 Refreshing server: ${server.name}`, 'info', '🔄', 'Server Management');
     
     try {
-      const discoveredTools = await discoverTools(server.url);
+      // Use the new refreshServer function from useMCPServers hook
+      await refreshServer(serverId);
       
-      const updatedServer = { 
-        ...server, 
-        tools: discoveredTools, 
-        lastConnected: new Date(), 
-        status: 'connected' as const 
-      };
-      
-      await saveServer(updatedServer);
-      
-      // Update tools in state
-      setTools(prev => {
-        const filtered = prev.filter(tool => tool.serverId !== serverId);
-        return [...filtered, ...discoveredTools.map((tool: any) => ({ 
-          ...tool, 
-          serverUrl: server.url, 
-          serverId 
-        }))];
-      });
-      
-      addLog(`✅ Server refreshed: ${server.name} with ${discoveredTools.length} tools`, 'success', '✅', 'Server Management');
-      toast({
-        title: "Server Refreshed",
-        description: `Successfully refreshed ${server.name} with ${discoveredTools.length} tools`,
-      });
+      addLog(`✅ Server refreshed: ${server.name}`, 'success', '✅', 'Server Management');
       
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      const errorServer = { ...server, status: 'error' as const };
-      await saveServer(errorServer);
       addLog(`❌ Server refresh failed: ${errorMsg}`, 'error', '❌', 'Server Management');
-      toast({
-        title: "Refresh Failed",
-        description: errorMsg,
-        variant: "destructive"
-      });
     } finally {
       setRefreshingServer(undefined);
     }

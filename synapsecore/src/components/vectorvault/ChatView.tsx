@@ -5,6 +5,8 @@ import { BotIcon, SendIcon, DatabaseIcon } from './CustomIcons';
 import vectorRetrievalService from '../../services/vectorRetrievalService';
 import { vectorVaultService } from '../../services/vectorVaultService';
 import geminiService from './services/geminiService';
+import { useMCPServers } from '../../hooks/useMCPServers';
+import { MCPTool } from '../../types/mcp';
 
 const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
     const isModel = message.role === 'model';
@@ -22,11 +24,31 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
 
 const ChatView: React.FC = () => {
     const { knowledgeBases } = useContext(AppContext);
+    const { servers } = useMCPServers();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedKbId, setSelectedKbId] = useState<string>('');
+    const [availableTools, setAvailableTools] = useState<MCPTool[]>([]);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    // Aggregate tools from all connected servers
+    useEffect(() => {
+        const allTools: MCPTool[] = [];
+        servers.forEach(server => {
+            if (server.tools && server.tools.length > 0) {
+                const serverTools = server.tools.map(tool => ({
+                    ...tool,
+                    serverUrl: server.url,
+                    serverId: server.id,
+                    category: tool.category || 'utility'
+                }));
+                allTools.push(...serverTools);
+            }
+        });
+        console.log('ChatView: Available tools for AI chat:', allTools.length);
+        setAvailableTools(allTools);
+    }, [servers]);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -73,6 +95,16 @@ const ChatView: React.FC = () => {
                 ragPrompt = `Context:\n${documentContext}\n\nQuestion: ${input}\n\nPlease answer the question based on the provided context. If the context doesn't contain relevant information, say so.`;
             }
             
+            // Add available tools to the prompt
+            if (availableTools.length > 0) {
+                const toolsContext = availableTools.map(tool => 
+                    `Tool: ${tool.name} - ${tool.description}`
+                ).join('\n');
+                
+                ragPrompt += `\n\nAvailable Tools (${availableTools.length} tools):\n${toolsContext}\n\nYou can reference these tools in your response if they would be helpful for the user's question.`;
+                console.log('ChatView: Added', availableTools.length, 'tools to AI prompt');
+            }
+            
             console.log('ChatView: Built prompt directly, length:', ragPrompt.length);
             console.log('ChatView: Prompt preview:', ragPrompt.substring(0, 200) + '...');
             
@@ -107,6 +139,11 @@ const ChatView: React.FC = () => {
                             <option>No knowledge bases available</option>
                         )}
                     </select>
+                    {availableTools.length > 0 && (
+                        <div className="text-sm text-gray-400">
+                            • {availableTools.length} tools available
+                        </div>
+                    )}
                 </div>
             </div>
 
