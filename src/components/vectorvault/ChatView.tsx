@@ -41,7 +41,11 @@ const ChatView: React.FC = () => {
     }, [knowledgeBases, selectedKbId]);
 
     const handleSend = useCallback(async () => {
-        if (!input.trim() || isLoading || !selectedKbId) return;
+        console.log('ChatView: handleSend called with:', { input: input.trim(), isLoading, selectedKbId });
+        if (!input.trim() || isLoading || !selectedKbId) {
+            console.log('ChatView: handleSend early return due to validation');
+            return;
+        }
 
         const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
