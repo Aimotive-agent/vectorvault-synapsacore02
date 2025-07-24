@@ -102,32 +102,68 @@ export const vectorVaultService = {
 
   processDocumentForVectorization(document: Document, onUpdate: (update: any) => void): void {
     try {
-      console.log(`[Service] Kicking off vectorization for document: ${document.name}`);
-      
-      const worker = new Worker(new URL('../workers/vectorizer.worker.ts', import.meta.url), {
-        type: 'module',
+      console.log(`[Service] Starting vectorization for document: ${document.name}`);
+      onUpdate({ status: 'processing', documentId: document.id, progress: 0 });
+
+      // Import the functions we need
+      import('./vectorRetrievalService').then(({ chunkText, createEmbedding }) => {
+        try {
+          if (!document.content) {
+            throw new Error('Document content is empty.');
+          }
+
+          const chunks = chunkText(document.content);
+          console.log(`[Service] Split document into ${chunks.length} chunks`);
+
+          const chunkEmbeddings = chunks.map((chunk, index) => {
+            const embedding = createEmbedding(chunk);
+            // Post progress for every 10 chunks or the last chunk
+            if ((index + 1) % 10 === 0 || index === chunks.length - 1) {
+              onUpdate({ 
+                status: 'progress', 
+                documentId: document.id, 
+                progress: Math.round(((index + 1) / chunks.length) * 100)
+              });
+            }
+            return {
+              id: `${document.id}-chunk-${index}`,
+              text: chunk,
+              embedding,
+            };
+          });
+
+          const titleAndFirstChunk = `${document.title || document.name || ''} ${chunks[0] || ''}`;
+          const docEmbedding = createEmbedding(titleAndFirstChunk);
+
+          const vectorData = {
+            chunks: chunkEmbeddings,
+            embedding: docEmbedding,
+          };
+
+          // Update the document with vector data
+          const updatedDoc = { ...document, vectorData };
+          const storedDocs = localStorage.getItem('vectorvault_documents');
+          const docs = storedDocs ? JSON.parse(storedDocs) : [];
+          const updatedDocs = docs.map((d: Document) => d.id === document.id ? updatedDoc : d);
+          localStorage.setItem('vectorvault_documents', JSON.stringify(updatedDocs));
+
+          console.log(`[Service] Vectorization complete for document: ${document.name}`);
+          onUpdate({ status: 'complete', documentId: document.id, vectorData });
+
+        } catch (error) {
+          console.error(`[Service] Error processing document ${document.id}:`, error);
+          onUpdate({ status: 'error', documentId: document.id, error: (error as Error).message });
+        }
+      }).catch(error => {
+        console.error(`[Service] Error importing vectorization functions:`, error);
+        onUpdate({ status: 'error', documentId: document.id, error: 'Failed to load vectorization functions' });
       });
 
-      worker.onmessage = (event: MessageEvent) => {
-        onUpdate(event.data);
-        if (event.data.status === 'complete' || event.data.status === 'error') {
-          worker.terminate();
-        }
-      };
-
-      worker.onerror = (error: ErrorEvent) => {
-        console.error('Error in vectorizer worker:', error);
-        onUpdate({ status: 'error', documentId: document.id, error: error.message });
-        worker.terminate();
-      };
-
-      worker.postMessage({ document });
-
     } catch (error) {
-      console.error(`Error kicking off vectorization for document ${document.id}:`, error);
+      console.error(`Error starting vectorization for document ${document.id}:`, error);
       onUpdate({ status: 'error', documentId: document.id, error: (error as Error).message });
     }
-  }
+  },
 };
 
 export default vectorVaultService;

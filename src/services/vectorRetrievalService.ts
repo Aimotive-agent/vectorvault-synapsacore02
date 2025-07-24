@@ -127,10 +127,31 @@ export const vectorRetrievalService = {
         .map(doc => {
           // Ensure vectorData and its embedding exist before calculating similarity
           const docEmbedding = doc.vectorData?.embedding || [];
-          const similarity = this.cosineSimilarity(queryEmbedding, docEmbedding);
+          const similarity = docEmbedding.length > 0 ? this.cosineSimilarity(queryEmbedding, docEmbedding) : 0;
+          console.log(`vectorRetrievalService: Document "${doc.name}" - embedding length: ${docEmbedding.length}, similarity: ${similarity}`);
           return { ...doc, similarity };
         })
-        .filter(doc => doc.similarity > 0.5); // Add a threshold to filter out irrelevant documents
+        .filter(doc => {
+          // If document has no embedding, use text search as fallback
+          if (!doc.vectorData?.embedding || doc.vectorData.embedding.length === 0) {
+            // Simple text search fallback
+            const queryLower = query.toLowerCase();
+            const contentLower = (doc.content || '').toLowerCase();
+            const nameLower = (doc.name || '').toLowerCase();
+            const hasTextMatch = contentLower.includes(queryLower) || nameLower.includes(queryLower);
+            if (hasTextMatch) {
+              console.log(`vectorRetrievalService: Including document "${doc.name}" via text search fallback`);
+              // Assign a moderate similarity score for text matches
+              doc.similarity = 0.3;
+              return true;
+            }
+            // If no text match, still include with very low similarity to show available docs
+            doc.similarity = 0.05;
+            return true;
+          }
+          // Lower threshold to 0.1 to be more inclusive
+          return doc.similarity > 0.1;
+        })
 
       scoredDocuments.sort((a, b) => b.similarity - a.similarity);
       console.log(`vectorRetrievalService: Found ${scoredDocuments.length} relevant documents after scoring and filtering.`);
@@ -189,10 +210,11 @@ ${doc.content || 'No content available'}
       
       if (relevantDocs.length === 0) {
         console.log(`⚠️ No relevant documents found in knowledge base "${kb.name}" for query: ${query}`);
-        const finalPrompt = `${basePrompt}
+        // Instead of returning a complex prompt, just use the user's query directly
+        // This ensures the AI responds naturally to the user's question
+        const finalPrompt = `You are a helpful AI assistant. Please answer the following question: ${query}
 
-[VECTOR KNOWLEDGE BASE: ${kb.name}]
-You have access to the "${kb.name}" vector base, but no relevant documents were found for the current query. Please respond based on your general knowledge, but acknowledge that you don't have specific information from the vector base.`;
+Note: You have access to the "${kb.name}" vector base, but no relevant documents were found for this query, so please provide a helpful response based on your general knowledge.`;
         console.log('vectorRetrievalService: Generated final prompt (no relevant docs):', finalPrompt);
         return finalPrompt;
       }

@@ -49,13 +49,22 @@ const ChatView: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const ragPrompt = await vectorRetrievalService.generateRAGPrompt(
-                'Answer the following question based on the provided context.',
-                selectedKbId, 
-                currentInput
-            );
+            let finalPrompt = currentInput;
+            
+            // Try to get RAG-enhanced prompt, but fallback to direct query if it fails
+            try {
+                finalPrompt = await vectorRetrievalService.generateRAGPrompt(
+                    'You are a helpful AI assistant. Please answer the following question:',
+                    selectedKbId, 
+                    currentInput
+                );
+                console.log('ChatView: Successfully generated RAG prompt');
+            } catch (ragError) {
+                console.warn('ChatView: RAG prompt generation failed, using direct query:', ragError);
+                finalPrompt = `You are a helpful AI assistant. Please answer the following question: ${currentInput}`;
+            }
 
-            const responseText = await geminiService.generateResponse(ragPrompt);
+            const responseText = await geminiService.generateResponse(finalPrompt);
             
             const modelMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: responseText };
             setMessages(prev => [...prev, modelMessage]);
