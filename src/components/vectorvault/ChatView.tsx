@@ -64,21 +64,44 @@ const ChatView: React.FC = () => {
                 console.log('ChatView: Sample document:', { name: kbDocuments[0].name, hasContent: !!kbDocuments[0].content, hasVectorData: !!kbDocuments[0].vectorData });
             }
             
-            // Try to get RAG-enhanced prompt, but fallback to direct query if it fails
+            // Try to get RAG-enhanced prompt with comprehensive fallback
             console.log('ChatView: Starting RAG prompt generation with:', { selectedKbId, currentInput });
-            try {
-                finalPrompt = await vectorRetrievalService.generateRAGPrompt(
-                    'You are a helpful AI assistant. Please answer the following question:',
-                    selectedKbId, 
-                    currentInput
-                );
-                console.log('ChatView: Successfully generated RAG prompt, length:', finalPrompt.length);
-                console.log('ChatView: RAG prompt preview:', finalPrompt.substring(0, 200) + '...');
-            } catch (ragError) {
-                console.error('ChatView: RAG prompt generation failed:', ragError);
-                finalPrompt = `You are a helpful AI assistant. Please answer the following question: ${currentInput}`;
-                console.log('ChatView: Using fallback prompt, length:', finalPrompt.length);
+            
+            if (kbDocuments.length > 0) {
+                try {
+                    finalPrompt = await vectorRetrievalService.generateRAGPrompt(
+                        'You are a helpful AI assistant. Answer the question based on the provided context.',
+                        selectedKbId, 
+                        currentInput
+                    );
+                    console.log('ChatView: Successfully generated RAG prompt, length:', finalPrompt.length);
+                    console.log('ChatView: RAG prompt preview:', finalPrompt.substring(0, 200) + '...');
+                } catch (ragError) {
+                    console.error('ChatView: RAG prompt generation failed, using document content directly:', ragError);
+                    
+                    // Fallback: Create prompt with document content directly
+                    const documentContext = kbDocuments
+                        .slice(0, 3) // Use top 3 documents
+                        .map(doc => `Document: ${doc.name}\nContent: ${doc.content || 'No content available'}`)
+                        .join('\n\n');
+                    
+                    finalPrompt = `You are a helpful AI assistant. Answer the following question based on the provided context.
+
+Context:
+${documentContext}
+
+Question: ${currentInput}
+
+Please provide a helpful answer based on the context above.`;
+                    
+                    console.log('ChatView: Using direct document fallback prompt, length:', finalPrompt.length);
+                }
+            } else {
+                console.log('ChatView: No documents found, using basic prompt');
+                finalPrompt = `You are a helpful AI assistant. The user asked: "${currentInput}". Please provide a helpful response. Note: No specific documents were found in the knowledge base to provide context.`;
             }
+            
+            console.log('ChatView: Final prompt length:', finalPrompt.length);
 
             const responseText = await geminiService.generateResponse(finalPrompt);
             
