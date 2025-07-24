@@ -1,5 +1,7 @@
 # SynapseCore + AIVectorVault Integration
 
+🚀 **Latest Update (Jan 24, 2025)**: Fixed server persistence and MCP discovery issues. Added localStorage fallback for unauthenticated users, implemented proper MCP protocol for server discovery, and resolved AI chat dynamic provider selection. All server add/refresh functionality now works correctly!
+
 This project integrates SynapseCore AI agent and AIVectorVault vector database into a unified single-page application (SPA) with shared authentication, tabbed navigation, and seamless data flow between components.
 
 ## Features
