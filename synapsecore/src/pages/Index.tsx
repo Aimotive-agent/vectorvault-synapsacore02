@@ -31,7 +31,7 @@ const Index = () => {
       <main className="flex-1 flex flex-col">
         <header className="flex items-center justify-end p-6 border-b border-gray-800">
           <div className="flex items-center gap-4">
-            <span className="text-gray-400">Welcome, {user.email}</span>
+            <span className="text-gray-400">Welcome, {user?.name || user?.email || 'Guest'}</span>
             <Button
               onClick={handleSignOut}
               variant="outline"

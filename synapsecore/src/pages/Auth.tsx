@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { AtSign, KeyRound, User, Eye, EyeOff } from 'lucide-react';
+import { User } from 'lucide-react';
+import { MailIcon, KeyIcon, EyeIcon, EyeOffIcon } from '@/components/ui/icons';
 
 export const AuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,11 +28,22 @@ export const AuthPage = () => {
   }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
+    console.log("Sign in attempt with:", formData.email);
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login({ email: formData.email, password: formData.password });
-      navigate('/');
+      console.log("Calling login function..."); 
+      const result = await login({ email: formData.email, password: formData.password }); 
+      console.log("Login result:", result);
+      
+      // Log successful login
+      console.log("Login successful, redirecting to dashboard...");
+      
+      // Use a small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        // Force a full page reload to ensure all contexts are properly refreshed
+        window.location.href = '/';
+      }, 100);
     } catch (err) {
       console.error("Sign in failed", err);
     } finally {
@@ -43,12 +55,21 @@ export const AuthPage = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      console.log("Registration attempt with:", formData.email);
       await register({ 
         email: formData.email, 
         password: formData.password, 
         name: formData.displayName 
       });
-      navigate('/');
+      
+      // Log successful registration
+      console.log("Registration successful, redirecting to dashboard...");
+      
+      // Use a small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        // Force a full page reload to ensure all contexts are properly refreshed
+        window.location.href = '/';
+      }, 100);
     } catch (err) {
       console.error("Sign up failed", err);
     } finally {
@@ -90,7 +111,7 @@ export const AuthPage = () => {
               <TabsContent value="signin" className="pt-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="relative">
-                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signin-email"
                       name="email"
@@ -103,7 +124,7 @@ export const AuthPage = () => {
                     />
                   </div>
                   <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <KeyIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signin-password"
                       name="password"
@@ -122,9 +143,9 @@ export const AuthPage = () => {
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <EyeIcon className="h-4 w-4 text-muted-foreground" />
                         )}
                       </Button>
                   </div>
@@ -149,7 +170,7 @@ export const AuthPage = () => {
                     />
                   </div>
                   <div className="relative">
-                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <MailIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-email"
                       name="email"
@@ -162,7 +183,7 @@ export const AuthPage = () => {
                     />
                   </div>
                   <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <KeyIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-password"
                       name="password"
@@ -182,9 +203,9 @@ export const AuthPage = () => {
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <EyeIcon className="h-4 w-4 text-muted-foreground" />
                       )}
                     </Button>
                   </div>
