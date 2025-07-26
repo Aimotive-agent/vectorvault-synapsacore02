@@ -1,0 +1,41 @@
+/* Custom styles for login page */
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Ensure content fits on one page */
+@media (min-height: 800px) {
+  .h-screen {
+    height: 100vh;
+    max-height: 100vh;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .flex-row {
+    flex-direction: column !important;
+  }
+  
+  .w-\[400px\] {
+    width: 100% !important;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .h-full {
+    height: auto !important;
+    max-height: none !important;
+  }
+  
+  .grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+}

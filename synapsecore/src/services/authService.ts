@@ -1,6 +1,6 @@
 import { User } from '../types/auth';
 
-// Auth token key in localStorage
+// Auth token key in localStorage - using the same keys as the main src auth service
 const AUTH_TOKEN_KEY = 'synapsecore_auth_token';
 const USER_DATA_KEY = 'synapsecore_user_data';
 

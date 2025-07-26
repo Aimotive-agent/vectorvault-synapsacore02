@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -11,26 +11,46 @@ interface ProtectedRouteProps {
  * A wrapper component that protects routes requiring authentication
  * Redirects to login if user is not authenticated or lacks required permission
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiredPermission 
-}) => {
-  const { isAuthenticated, hasPermission } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermission }) => {
+  const { isAuthenticated, loading, hasPermission } = useAuth();
   const location = useLocation();
+  const [authChecked, setAuthChecked] = useState(false);
+  
+  // Check for login success flag from sessionStorage
+  const loginSuccess = sessionStorage.getItem('login_success') === 'true';
+  
+  useEffect(() => {
+    // If auth state is no longer loading, mark auth as checked
+    if (!loading) {
+      setAuthChecked(true);
+      
+      // Clear login success flag after it's been processed
+      if (loginSuccess) {
+        console.log('Login success flag found, clearing...');
+        sessionStorage.removeItem('login_success');
+      }
+    }
+  }, [loading, loginSuccess]);
 
-  // Check if user is authenticated
+  // If still loading auth state, show loading indicator
+  if (loading || !authChecked) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  // If not authenticated, redirect to login
   if (!isAuthenticated) {
-    // Redirect to login page, but save the current location they were trying to access
+    console.log('Not authenticated, redirecting to login...');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If a specific permission is required, check if user has it
+  // If permission is required but user doesn't have it, redirect to unauthorized
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    // Redirect to unauthorized page
-    return <Navigate to="/unauthorized" state={{ requiredPermission }} replace />;
+    console.log(`Missing required permission: ${requiredPermission}, redirecting to unauthorized...`);
+    return <Navigate to="/unauthorized" replace />;
   }
 
-  // User is authenticated and has required permissions, render the protected content
+  // User is authenticated and has required permissions
+  console.log('Authentication successful, rendering protected content...');
   return <>{children}</>;
 };
 

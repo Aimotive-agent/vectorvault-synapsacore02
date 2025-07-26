@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import { AuthPage } from "./pages/Auth";
-import Login from "./pages/Login";
+import Login from "../../src/pages/Login";
+import Register from "../../src/pages/Register";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -31,6 +32,7 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 

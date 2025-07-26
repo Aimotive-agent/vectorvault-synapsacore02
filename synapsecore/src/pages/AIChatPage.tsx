@@ -1,9 +1,9 @@
-import { MCPWorkbench } from '@/components/mcp/MCPWorkbench';
+import StandaloneAIChat from '@/components/mcp/StandaloneAIChat';
 
 const AIChatPage = () => {
   return (
     <div className="h-full">
-      <MCPWorkbench />
+      <StandaloneAIChat />
     </div>
   );
 };

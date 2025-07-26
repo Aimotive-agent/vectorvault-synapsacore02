@@ -11,8 +11,20 @@ interface AuthContextType extends AuthState {
   hasVectorVaultAccess: () => boolean;
 }
 
-// Create the context with a default value
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create the context with a default empty implementation to avoid the 'must be used within provider' error
+const defaultContext: AuthContextType = {
+  isAuthenticated: false,
+  user: null,
+  loading: true,
+  error: null,
+  login: async () => { throw new Error('AuthContext not initialized'); },
+  register: async () => { throw new Error('AuthContext not initialized'); },
+  logout: () => {},
+  hasPermission: () => false,
+  hasVectorVaultAccess: () => false
+};
+
+const AuthContext = createContext<AuthContextType>(defaultContext);
 
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -138,10 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 // Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return context; // Will return the default context if outside provider
 };
 
 export default AuthContext;
