@@ -21,7 +21,22 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: ['react/jsx-runtime'],
+      external: [
+        'react/jsx-runtime',
+        'module',
+        'fs',
+        'path',
+        'os',
+        'crypto',
+        'buffer',
+        'stream',
+        'util'
+      ],
     },
+  },
+  define: {
+    // Handle Node.js global variables
+    'process.env': {},
+    'global': {}
   },
 }));
