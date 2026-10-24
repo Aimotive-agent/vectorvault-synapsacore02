@@ -36,16 +36,16 @@ const ServerView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-white">Server Management</h2>
+      <h2 className="text-3xl font-bold text-ink">Server Management</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* API Keys Section */}
-        <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
+        <div className="bg-white border border-line p-6 rounded-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-white">API Keys</h3>
+            <h3 className="text-xl font-semibold text-ink">API Keys</h3>
             <button
               onClick={() => setShowApiKeyModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
+              className="bg-navy hover:bg-navy-deep text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
               disabled={knowledgeBases.length === 0}
             >
               <Key className="w-5 h-5" />
@@ -57,25 +57,25 @@ const ServerView: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left py-3 px-4 text-slate-400 font-semibold">Name</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-semibold">Key</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-semibold">Knowledge Base</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-semibold">Created</th>
-                    <th className="text-left py-3 px-4 text-slate-400 font-semibold">Actions</th>
+                  <tr className="border-b border-line">
+                    <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Name</th>
+                    <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Key</th>
+                    <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Knowledge Base</th>
+                    <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Created</th>
+                    <th className="text-left py-3 px-4 text-muted-foreground font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {apiKeys.map((apiKey) => (
-                    <tr key={apiKey.id} className="border-b border-slate-700 hover:bg-slate-700/50">
-                      <td className="py-3 px-4 text-white">{apiKey.name}</td>
-                      <td className="py-3 px-4 text-white font-mono">{apiKey.displayKey}</td>
-                      <td className="py-3 px-4 text-white">{apiKey.knowledgeBaseName}</td>
-                      <td className="py-3 px-4 text-white">{apiKey.createdAt}</td>
+                    <tr key={apiKey.id} className="border-b border-line hover:bg-paper-2">
+                      <td className="py-3 px-4 text-ink">{apiKey.name}</td>
+                      <td className="py-3 px-4 text-ink font-mono">{apiKey.displayKey}</td>
+                      <td className="py-3 px-4 text-ink">{apiKey.knowledgeBaseName}</td>
+                      <td className="py-3 px-4 text-ink">{apiKey.createdAt}</td>
                       <td className="py-3 px-4">
                         <button 
                           onClick={() => revokeApiKey(apiKey.id)}
-                          className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                          className="p-1 text-destructive hover:text-destructive/80 transition-colors"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -86,20 +86,20 @@ const ServerView: React.FC = () => {
               </table>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-slate-500">
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Key className="w-12 h-12 mb-4" />
-              <h4 className="text-lg font-semibold text-slate-400">No API Keys</h4>
+              <h4 className="text-lg font-semibold">No API Keys</h4>
               <p>Generate API keys to access your knowledge bases programmatically.</p>
             </div>
           )}
           
           {/* New API Key Alert */}
           {newApiKey && (
-            <div className="mt-4 p-4 bg-green-900/30 border border-green-700 rounded-md">
-              <h4 className="text-green-400 font-semibold mb-2">New API Key Generated</h4>
-              <p className="text-white mb-2">Make sure to copy your API key now. You won't be able to see it again!</p>
+            <div className="mt-4 p-4 bg-emerald-bg border border-success/40 rounded-md">
+              <h4 className="text-success font-semibold mb-2">New API Key Generated</h4>
+              <p className="text-ink mb-2">Make sure to copy your API key now. You won't be able to see it again!</p>
               <div className="flex items-center space-x-2">
-                <code className="bg-slate-900 p-2 rounded text-green-400 font-mono flex-1 overflow-x-auto">
+                <code className="bg-white border border-line p-2 rounded text-success font-mono flex-1 overflow-x-auto">
                   {newApiKey}
                 </code>
                 <button 
@@ -107,14 +107,14 @@ const ServerView: React.FC = () => {
                     navigator.clipboard.writeText(newApiKey);
                     alert('API key copied to clipboard!');
                   }}
-                  className="p-2 bg-slate-700 rounded hover:bg-slate-600 transition-colors"
+                  className="p-2 bg-paper-2 border border-line rounded hover:bg-line transition-colors"
                 >
-                  <Copy className="w-5 h-5 text-white" />
+                  <Copy className="w-5 h-5 text-ink" />
                 </button>
               </div>
               <button 
                 onClick={() => setNewApiKey(null)}
-                className="mt-3 text-sm text-slate-400 hover:text-white transition-colors"
+                className="mt-3 text-sm text-muted-foreground hover:text-ink transition-colors"
               >
                 Dismiss
               </button>
@@ -123,12 +123,12 @@ const ServerView: React.FC = () => {
         </div>
         
         {/* Server Data Section */}
-        <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
+        <div className="bg-white border border-line p-6 rounded-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-white">Server Data</h3>
+            <h3 className="text-xl font-semibold text-ink">Server Data</h3>
             <button
               onClick={handleExportData}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
+              className="bg-navy hover:bg-navy-deep text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
             >
               <Download className="w-5 h-5" />
               <span>Export Data</span>
@@ -136,7 +136,7 @@ const ServerView: React.FC = () => {
           </div>
           
           <div className="mb-4">
-            <p className="text-slate-300">
+            <p className="text-muted-foreground">
               Export your knowledge bases, documents, and API keys for server deployment.
             </p>
           </div>
@@ -144,24 +144,24 @@ const ServerView: React.FC = () => {
           {serverData && (
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="text-lg font-semibold text-white">Exported Data</h4>
+                <h4 className="text-lg font-semibold text-ink">Exported Data</h4>
                 <button
                   onClick={handleCopyData}
-                  className="p-2 bg-slate-700 rounded hover:bg-slate-600 transition-colors"
+                  className="p-2 bg-paper-2 border border-line rounded hover:bg-line transition-colors"
                 >
-                  <Copy className="w-5 h-5 text-white" />
+                  <Copy className="w-5 h-5 text-ink" />
                 </button>
               </div>
-              <div className="bg-slate-900 p-4 rounded-md overflow-auto max-h-80">
-                <pre className="text-slate-300 text-sm whitespace-pre-wrap">{serverData}</pre>
+              <div className="bg-navy-deep p-4 rounded-md overflow-auto max-h-80">
+                <pre className="text-white/90 text-sm whitespace-pre-wrap">{serverData}</pre>
               </div>
             </div>
           )}
           
           {!serverData && (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-slate-500">
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Server className="w-12 h-12 mb-4" />
-              <h4 className="text-lg font-semibold text-slate-400">No Data Exported</h4>
+              <h4 className="text-lg font-semibold">No Data Exported</h4>
               <p>Click the Export Data button to view your server data.</p>
             </div>
           )}
@@ -171,19 +171,19 @@ const ServerView: React.FC = () => {
       {/* API Key Modal */}
       {showApiKeyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h3 className="text-xl font-bold text-white mb-4">Generate API Key</h3>
+          <div className="bg-white border border-line p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-xl font-bold text-ink mb-4">Generate API Key</h3>
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="api-kb" className="block text-sm font-medium text-slate-400 mb-1">
+                <label htmlFor="api-kb" className="block text-sm font-medium text-muted-foreground mb-1">
                   Knowledge Base
                 </label>
                 <select
                   id="api-kb"
                   value={selectedKbId}
                   onChange={(e) => setSelectedKbId(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full bg-white border border-line rounded-md py-2 px-3 text-ink focus:ring-2 focus:ring-navy focus:outline-none"
                   required
                 >
                   {knowledgeBases.map(kb => (
@@ -193,7 +193,7 @@ const ServerView: React.FC = () => {
               </div>
               
               <div>
-                <label htmlFor="api-name" className="block text-sm font-medium text-slate-400 mb-1">
+                <label htmlFor="api-name" className="block text-sm font-medium text-muted-foreground mb-1">
                   Key Name
                 </label>
                 <input
@@ -202,7 +202,7 @@ const ServerView: React.FC = () => {
                   value={apiKeyName}
                   onChange={(e) => setApiKeyName(e.target.value)}
                   placeholder="Enter a name for this API key"
-                  className="w-full bg-slate-700 border border-slate-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full bg-white border border-line rounded-md py-2 px-3 text-ink focus:ring-2 focus:ring-navy focus:outline-none"
                   required
                 />
               </div>
@@ -210,14 +210,14 @@ const ServerView: React.FC = () => {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowApiKeyModal(false)}
-                  className="px-4 py-2 bg-slate-700 text-white rounded-md hover:bg-slate-600 transition-colors"
+                  className="px-4 py-2 bg-paper-2 border border-line text-ink rounded-md hover:bg-line transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleGenerateApiKey}
                   disabled={!apiKeyName.trim() || !selectedKbId}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-navy text-white rounded-md hover:bg-navy-deep disabled:bg-line disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                 >
                   Generate
                 </button>

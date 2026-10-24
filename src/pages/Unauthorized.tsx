@@ -17,19 +17,19 @@ const Unauthorized: React.FC = () => {
   const requiredPermission = locationState?.requiredPermission || 'appropriate permissions';
   
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen bg-paper p-4">
+      <Card className="w-full max-w-md border-line">
         <CardHeader>
           <div className="flex items-center justify-center mb-4">
-            <ShieldAlert className="h-12 w-12 text-red-500" />
+            <ShieldAlert className="h-12 w-12 text-destructive" />
           </div>
-          <CardTitle className="text-2xl text-center">Access Denied</CardTitle>
+          <CardTitle className="text-2xl text-center text-ink">Access Denied</CardTitle>
           <CardDescription className="text-center">
             You don't have permission to access this page
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center mb-4">
+          <p className="text-center mb-4 text-muted-foreground">
             This page requires {requiredPermission} to access.
             Please contact your administrator if you believe you should have access.
           </p>

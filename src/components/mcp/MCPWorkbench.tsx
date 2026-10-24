@@ -22,6 +22,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
+const brandMark = new URL('brand/veritas-mark.png', document.baseURI).href;
+
 export const MCPWorkbench = () => {
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -623,16 +625,17 @@ export const MCPWorkbench = () => {
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
               <img 
-                src="/lovable-uploads/9b4be813-c110-45e0-aed0-0ca7c4454219.png" 
-                alt="Synapsecore Logo" 
-                className="h-16 w-16 mr-4"
+                src={brandMark} 
+                alt="Veritas Global AI" 
+                className="h-16 w-16 mr-4 object-contain"
               />
             </div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-              Synapsecore Super Agent
+            <h1 className="text-4xl font-semibold mb-2 text-ink">
+              <span className="font-serif">Veritas</span>{' '}
+              <span className="font-sans">SynapseCore</span>
             </h1>
             <p className="text-muted-foreground text-lg">
-              AI-powered MCP tool orchestration platform
+              AI Agent + Vector Vault
             </p>
           </div>
         </div>

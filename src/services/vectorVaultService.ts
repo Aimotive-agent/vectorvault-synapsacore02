@@ -52,6 +52,53 @@ export const vectorVaultService = {
     return storedDocs ? JSON.parse(storedDocs) : [];
   },
 
+  /**
+   * Save an AI chat message as a document in a knowledge base.
+   * Each save creates a new document with a unique timestamped title,
+   * then vectorizes it so it becomes searchable in the vault.
+   */
+  async saveAIMessageToVault(
+    content: string,
+    kbId: string,
+    meta?: { source?: string; type?: string; saveCount?: number }
+  ): Promise<Document> {
+    const stamp = new Date();
+    const title = `AI Response ${stamp.toISOString().replace('T', ' ').slice(0, 19)}${
+      meta?.saveCount ? ` (${meta.saveCount})` : ''
+    }`;
+
+    const newDoc = await this.addDocument(
+      {
+        knowledgeBaseId: kbId,
+        title,
+        name: `${title}.md`,
+        type: 'MD',
+        size: `${Math.max(1, Math.round(new Blob([content]).size / 1024))} KB`,
+        uploadDate: stamp.toISOString(),
+        tags: ['ai-response', ...(meta?.source ? [meta.source.toLowerCase().replace(/\s+/g, '-')] : [])],
+        content,
+        metadata: {
+          source: meta?.source ?? 'SynapseCore Chat',
+          type: meta?.type ?? 'ai_response',
+          saveCount: meta?.saveCount ?? 1,
+        },
+      },
+      kbId
+    );
+
+    // Vectorize the message and finalize its status once done.
+    this.processDocumentForVectorization(newDoc, (update) => {
+      if (update.status === 'complete' || update.status === 'error') {
+        void this.updateDocument(newDoc.id, {
+          status: update.status === 'complete' ? DocumentStatus.Indexed : DocumentStatus.Error,
+          ...(update.status === 'error' ? { error: update.error } : {}),
+        });
+      }
+    });
+
+    return newDoc;
+  },
+
   async createKnowledgeBase(name: string, description: string): Promise<KnowledgeBase> {
     const newKb: KnowledgeBase = {
       id: `kb_${Date.now()}`,
@@ -98,6 +145,15 @@ export const vectorVaultService = {
     }
 
     return true;
+  },
+
+  async updateDocument(documentId: string, patch: Partial<Document>): Promise<Document | null> {
+    const docs = await this.getDocuments();
+    const index = docs.findIndex(d => d.id === documentId);
+    if (index === -1) return null;
+    docs[index] = { ...docs[index], ...patch, updatedAt: new Date().toISOString() };
+    localStorage.setItem('vectorvault_documents', JSON.stringify(docs));
+    return docs[index];
   },
 
   processDocumentForVectorization(document: Document, onUpdate: (update: any) => void): void {

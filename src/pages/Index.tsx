@@ -32,7 +32,7 @@ const Index = () => {
       <Navigation />
       
       {/* User Header */}
-      <div className="border-b bg-card/50 mt-16">
+      <div className="border-b border-line bg-white mt-16">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
@@ -42,18 +42,12 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <a 
-                  href="https://aiproductionpro.com/" 
+                  href="https://veritasglobalai.com/" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-foreground transition-colors"
+                  className="hover:text-gold transition-colors"
                 >
-                  Designed and Built by Ai Production Pro
-                </a>
-                <a 
-                  href="mailto:support@aiproductionpro.com"
-                  className="hover:text-foreground transition-colors"
-                >
-                  support@aiproductionpro.com
+                  By Veritas Global AI
                 </a>
               </div>
             </div>

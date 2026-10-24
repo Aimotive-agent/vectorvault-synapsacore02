@@ -18,7 +18,24 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
+				serif: ['"Source Serif 4"', "Georgia", "serif"],
+			},
 			colors: {
+				/* Veritas Global AI brand — same values as global-tax-ai-assist */
+				ink: "#1C1917",
+				"ink-2": "#292524",
+				line: "#E5E7EB",
+				"line-soft": "#EEEDEA",
+				paper: "#FAFAF9",
+				"paper-2": "#F4F3EF",
+				navy: "#0F2A4A",
+				"navy-deep": "#0A1F38",
+				gold: "#B08D57",
+				emerald: "#047857",
+				"emerald-bg": "#ECFDF5",
+
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -72,6 +89,7 @@ export default {
 				}
 			},
 			backgroundImage: {
+				/* Kept for existing class names — flat solids, no visible gradients */
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-surface': 'var(--gradient-surface)',
 				'gradient-accent': 'var(--gradient-accent)'

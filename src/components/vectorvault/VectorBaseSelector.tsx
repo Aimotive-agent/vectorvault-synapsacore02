@@ -81,11 +81,11 @@ const VectorBaseSelector: React.FC<VectorBaseSelectorProps> = ({
 
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
-      <Database className="w-4 h-4 text-slate-400" />
+      <Database className="w-4 h-4 text-muted-foreground" />
       <select 
         value={selectedKbId}
         onChange={(e) => handleSelectKb(e.target.value)}
-        className="bg-slate-800 border border-slate-700 rounded-md py-1.5 px-3 text-sm font-medium text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        className="bg-white border border-line rounded-md py-1.5 px-3 text-sm font-medium text-ink focus:ring-2 focus:ring-navy focus:outline-none"
         aria-label="Select a vector base"
       >
         <option value="">No vector base selected</option>

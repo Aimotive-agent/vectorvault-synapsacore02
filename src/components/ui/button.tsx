@@ -5,20 +5,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-gradient-primary text-primary-foreground hover:shadow-glow hover:scale-105 active:scale-100",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-soft",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:shadow-soft",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-soft",
+        default: "bg-primary text-primary-foreground hover:bg-navy-deep",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-success text-success-foreground hover:bg-success/90 hover:shadow-soft",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 hover:shadow-soft",
-        gradient: "bg-gradient-accent text-accent-foreground hover:shadow-glow hover:scale-105 active:scale-100",
-        mcp: "bg-gradient-primary text-primary-foreground hover:shadow-glow hover:scale-105 active:scale-100 border border-primary/20",
+        link: "text-primary underline-offset-4 hover:underline hover:text-gold",
+        success: "bg-success text-success-foreground hover:bg-success/90",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90",
+        gradient: "bg-gold text-navy hover:bg-gold/90",
+        mcp: "bg-primary text-primary-foreground hover:bg-navy-deep border border-primary/20",
       },
       size: {
         default: "h-10 px-4 py-2",

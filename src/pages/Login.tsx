@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+const brandMark = new URL('brand/veritas-mark.png', document.baseURI).href;
+
 interface LocationState {
   from?: {
     pathname: string;
@@ -69,57 +71,76 @@ const LoginInner = () => {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-dark-bg p-4">
-      <Card className="w-full max-w-md bg-card shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
-              </Button>
+    <div className="flex h-screen items-center justify-center bg-paper p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex items-center justify-center gap-3">
+          <img src={brandMark} alt="Veritas Global AI" className="h-10 w-10 object-contain" />
+          <div className="text-left">
+            <div className="flex items-baseline gap-1.5 leading-tight">
+              <span className="font-serif text-lg font-semibold text-ink">Veritas</span>
+              <span className="text-base font-medium text-ink">SynapseCore</span>
             </div>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-center text-sm">
-            Don't have an account?{' '}
-            <a href="/register" className="text-primary hover:underline">
-              Register
-            </a>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
+              AI Agent + Vector Vault
+            </div>
           </div>
-        </CardFooter>
-      </Card>
+        </div>
+
+        <Card className="w-full border-line">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-semibold text-ink">Login</CardTitle>
+            <CardDescription>Enter your credentials to access your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Logging in...' : 'Login'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center text-sm">
+              Don't have an account?{' '}
+              <a href="/register" className="text-primary hover:text-gold transition-colors underline underline-offset-4">
+                Register
+              </a>
+            </div>
+          </CardFooter>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Veritas Global AI
+        </p>
+      </div>
     </div>
   );
 };

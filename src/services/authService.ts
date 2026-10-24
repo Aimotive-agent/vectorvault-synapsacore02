@@ -1,82 +1,91 @@
+import { supabase } from '../integrations/supabase/client';
 import { User } from '../types/auth';
 
-// Auth token key in localStorage
-const AUTH_TOKEN_KEY = 'synapsecore_auth_token';
+// Mirror of the current app user in localStorage (kept in sync with the Supabase session)
 const USER_DATA_KEY = 'synapsecore_user_data';
 
+// Every signed-in user gets the base permissions, including VectorVault access.
+const DEFAULT_PERMISSIONS = ['read', 'write', 'vector_vault_access'];
+
+const toAppUser = (sbUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User => {
+  const meta = sbUser.user_metadata ?? {};
+  const email = sbUser.email ?? '';
+  return {
+    id: sbUser.id,
+    email,
+    name: (meta.display_name as string) || (meta.name as string) || email.split('@')[0],
+    role: 'user',
+    permissions: [...DEFAULT_PERMISSIONS],
+  };
+};
+
+const remember = (user: User) => localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+const forget = () => localStorage.removeItem(USER_DATA_KEY);
+
+const friendlyError = (message: string): string => {
+  if (/invalid login credentials/i.test(message)) return 'Incorrect email or password.';
+  if (/already (registered|exists)/i.test(message)) return 'An account with this email already exists — please sign in.';
+  return message || 'Authentication failed';
+};
+
 /**
- * Service for handling authentication across SynapseCore and VectorVault
+ * Authentication for SynapseCore + VectorVault, backed by Supabase auth
+ * (self-hosted on the homelab; signups are auto-confirmed).
  */
 export const authService = {
   /**
    * Login user and store authentication data
    */
   login: async (email: string, password: string): Promise<User> => {
-    try {
-      // In a real implementation, this would be an API call to a backend service
-      // For now, we'll simulate a successful login with mock data
-      const mockUser: User = {
-        id: 'user-1',
-        email,
-        name: email.split('@')[0],
-        role: 'user',
-        permissions: ['read', 'write', 'vector_vault_access']
-      };
-      
-      // Store auth token and user data
-      const mockToken = `mock-token-${Date.now()}`;
-      localStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-      localStorage.setItem(USER_DATA_KEY, JSON.stringify(mockUser));
-      
-      return mockUser;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error('Authentication failed');
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(friendlyError(error.message));
+
+    const user = toAppUser(data.user);
+    remember(user);
+    return user;
   },
-  
+
   /**
-   * Register a new user
+   * Register a new user. Signups are auto-confirmed on our stack,
+   * so the user is signed in immediately.
    */
   register: async (email: string, password: string, name: string): Promise<User> => {
-    try {
-      // In a real implementation, this would be an API call to a backend service
-      // For now, we'll simulate a successful registration with mock data
-      const mockUser: User = {
-        id: `user-${Date.now()}`,
-        email,
-        name,
-        role: 'user',
-        permissions: ['read', 'write', 'vector_vault_access']
-      };
-      
-      // Store auth token and user data
-      const mockToken = `mock-token-${Date.now()}`;
-      localStorage.setItem(AUTH_TOKEN_KEY, mockToken);
-      localStorage.setItem(USER_DATA_KEY, JSON.stringify(mockUser));
-      
-      return mockUser;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw new Error('Registration failed');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: name } },
+    });
+
+    // GoTrue reports duplicate signups as an empty identities array (or an error).
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      throw new Error('An account with this email already exists — please sign in.');
     }
+    if (error) throw new Error(friendlyError(error.message));
+
+    if (!data.session || !data.user) {
+      throw new Error('Account created. Please check your email to confirm, then sign in.');
+    }
+
+    const user = toAppUser(data.user);
+    remember(user);
+    return user;
   },
-  
+
   /**
    * Logout user and clear authentication data
    */
   logout: () => {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(USER_DATA_KEY);
+    forget();
+    void supabase.auth.signOut();
   },
-  
+
   /**
    * Check if user is authenticated
    */
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem(AUTH_TOKEN_KEY);
+    return !!localStorage.getItem(USER_DATA_KEY);
   },
-  
+
   /**
    * Get current user data
    */
@@ -84,14 +93,34 @@ export const authService = {
     const userData = localStorage.getItem(USER_DATA_KEY);
     return userData ? JSON.parse(userData) : null;
   },
-  
+
   /**
-   * Get authentication token
+   * Restore the session from Supabase after a reload.
+   * Returns the app user, or null when signed out.
    */
-  getToken: (): string | null => {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
+  restoreSession: async (): Promise<User | null> => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.user) {
+      forget();
+      return null;
+    }
+    const user = toAppUser(data.session.user);
+    remember(user);
+    return user;
   },
-  
+
+  /**
+   * Subscribe to Supabase auth state changes (sign-in, sign-out, token refresh).
+   */
+  onAuthStateChange: (callback: (user: User | null) => void) => {
+    return supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ? toAppUser(session.user) : null;
+      if (user) remember(user);
+      else forget();
+      callback(user);
+    });
+  },
+
   /**
    * Check if user has specific permission
    */
@@ -99,7 +128,7 @@ export const authService = {
     const user = authService.getCurrentUser();
     return user?.permissions?.includes(permission) || false;
   },
-  
+
   /**
    * Check if user has access to VectorVault
    */

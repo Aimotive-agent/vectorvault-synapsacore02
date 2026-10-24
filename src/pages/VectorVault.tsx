@@ -18,10 +18,10 @@ const VectorVault: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-center space-y-4">
           
-          <p className="text-slate-400">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ const VectorVault: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-paper text-ink">
       {/* Navigation */}
       <Navigation />
       

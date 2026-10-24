@@ -3,16 +3,17 @@ import { AppContext } from './contexts/AppContext';
 import { ChatMessage } from './types';
 import { BotIcon, SendIcon, DatabaseIcon } from './CustomIcons';
 import vectorVaultService from '../../services/vectorVaultService';
-import geminiService from './services/geminiService';
+import aiProviderService from '@/services/aiProviderService';
+import { useAISettings } from '@/hooks/useAISettings';
 
 const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
     const isModel = message.role === 'model';
     return (
         <div className={`flex items-start gap-3 ${isModel ? '' : 'flex-row-reverse'}`}>
-            <div className={`p-3 rounded-full ${isModel ? 'bg-slate-700' : 'bg-indigo-600'}`}>
-                {isModel ? <BotIcon className="w-6 h-6 text-indigo-400" /> : <div className="w-6 h-6 font-bold flex items-center justify-center">You</div>}
+            <div className={`p-3 rounded-full ${isModel ? 'bg-white border border-line' : 'bg-navy'}`}>
+                {isModel ? <BotIcon className="w-6 h-6 text-gold" /> : <div className="w-6 h-6 font-bold flex items-center justify-center text-paper">You</div>}
             </div>
-            <div className={`p-4 rounded-xl max-w-xl ${isModel ? 'bg-slate-800' : 'bg-indigo-600 text-white'}`}>
+            <div className={`p-4 rounded-xl max-w-xl ${isModel ? 'bg-white border border-line text-ink' : 'bg-navy text-white'}`}>
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
             </div>
         </div>
@@ -21,6 +22,7 @@ const ChatBubble: React.FC<{ message: ChatMessage }> = ({ message }) => {
 
 const ChatView: React.FC = () => {
     const { knowledgeBases } = useContext(AppContext);
+    const { settings } = useAISettings();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -93,11 +95,13 @@ Please provide a detailed answer based on the context above. If the context does
             
             console.log('ChatView: Final prompt length:', finalPrompt.length);
 
-            // CRITICAL FIX: Ensure document context is always included
-            console.log('ChatView: About to call geminiService with prompt length:', finalPrompt.length);
-            console.log('ChatView: Prompt preview:', finalPrompt.substring(0, 100));
-            
-            const responseText = await geminiService.generateResponse(finalPrompt);
+            // Route through the provider-aware chat service (BYOK or homelab gateway)
+            console.log('ChatView: Sending prompt to AI provider, length:', finalPrompt.length);
+
+            const responseText = await aiProviderService.chat(
+                [{ role: 'user', content: finalPrompt }],
+                settings
+            );
             
             const modelMessage: ChatMessage = { id: `model-${Date.now()}`, role: 'model', content: responseText };
             setMessages(prev => [...prev, modelMessage]);
@@ -118,13 +122,13 @@ Please provide a detailed answer based on the context above. If the context does
     return (
         <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-white">Chat</h2>
+                <h2 className="text-3xl font-bold text-ink">Chat</h2>
                 <div className="flex items-center space-x-2">
-                    <DatabaseIcon className="w-5 h-5 text-slate-400" />
+                    <DatabaseIcon className="w-5 h-5 text-muted-foreground" />
                     <select 
                         value={selectedKbId}
                         onChange={e => setSelectedKbId(e.target.value)}
-                        className="bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="bg-white border border-line rounded-md px-3 py-2 text-ink focus:ring-2 focus:ring-navy focus:outline-none"
                     >
                         <option value="" disabled>Select a knowledge base</option>
                         {knowledgeBases.map(kb => (
@@ -134,15 +138,15 @@ Please provide a detailed answer based on the context above. If the context does
                 </div>
             </div>
 
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-800/50 rounded-lg">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 bg-paper-2 border border-line rounded-lg">
                 {messages.map(msg => <ChatBubble key={msg.id} message={msg} />)}
                 {isLoading && (
                     <div className="flex items-start gap-3">
-                        <div className="p-3 rounded-full bg-slate-700">
-                            <BotIcon className="w-6 h-6 text-indigo-400 animate-pulse" />
+                        <div className="p-3 rounded-full bg-white border border-line">
+                            <BotIcon className="w-6 h-6 text-gold animate-pulse" />
                         </div>
-                        <div className="p-4 rounded-xl max-w-xl bg-slate-800">
-                            <p className="text-sm text-slate-400">Thinking...</p>
+                        <div className="p-4 rounded-xl max-w-xl bg-white border border-line">
+                            <p className="text-sm text-muted-foreground">Thinking...</p>
                         </div>
                     </div>
                 )}
@@ -156,13 +160,13 @@ Please provide a detailed answer based on the context above. If the context does
                         onChange={e => setInput(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && handleSend()}
                         placeholder={selectedKbId ? `Ask about ${knowledgeBases.find(k=>k.id===selectedKbId)?.name || '...'} ` : 'Select a knowledge base to begin'}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 pl-4 pr-14 text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                        className="w-full bg-white border border-line rounded-lg py-3 pl-4 pr-14 text-ink focus:ring-2 focus:ring-navy focus:outline-none transition"
                         disabled={isLoading || !selectedKbId}
                     />
                     <button 
                         onClick={handleSend}
                         disabled={isLoading || !input.trim() || !selectedKbId}
-                        className="absolute top-1/2 right-3 -translate-y-1/2 p-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                        className="absolute top-1/2 right-3 -translate-y-1/2 p-2 rounded-full bg-navy text-white hover:bg-navy-deep disabled:bg-line disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                         aria-label="Send message"
                     >
                        <SendIcon className="w-5 h-5"/>

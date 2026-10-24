@@ -27,7 +27,7 @@ if ! command -v node &> /dev/null; then
 fi
 
 # Navigate to the project directory
-cd "$(dirname "$0")/synapsecore"
+cd "$(dirname "$0")"
 
 # Check if package.json exists
 if [ ! -f "package.json" ]; then
@@ -80,9 +80,11 @@ echo -e "${BLUE}Starting the development server...${NC}"
 echo -e "${YELLOW}The application will be available at http://localhost:5173${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop the server${NC}"
 echo ""
-echo -e "${CYAN}=== TEST CREDENTIALS ===${NC}"
-echo -e "Email: ${GREEN}test@example.com${NC}"
-echo -e "Password: ${GREEN}password${NC}"
+echo -e "${CYAN}=== GETTING STARTED ===${NC}"
+echo -e "Create an account on the Sign Up tab (email + password)."
+echo -e "Accounts are confirmed instantly and land straight in the app."
+echo -e "Chat works out of the box via the Veritas AI gateway — add your own"
+echo -e "provider API keys later under AI Settings for BYOK models."
 echo ""
 echo -e "${CYAN}=== MANUAL TESTING ===${NC}"
 echo -e "A manual testing guide is available at: ${GREEN}./tests/manual-testing.md${NC}"

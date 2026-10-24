@@ -570,10 +570,10 @@ export const AISettingsCard = ({ settings, onSettingsChange, onLog }: AISettings
   };
 
   return (
-    <Card className="bg-gradient-surface border shadow-soft">
+    <Card className="border-line">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5 text-primary" />
+          <Settings className="h-5 w-5 text-gold" />
           AI Provider Settings
           {settings.provider && (
             <Badge variant="default">

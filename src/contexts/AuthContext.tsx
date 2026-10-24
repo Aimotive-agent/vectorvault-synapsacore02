@@ -35,30 +35,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: null
   });
 
-  // Check authentication status on mount
+  // Restore the Supabase session on mount and keep state in sync
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const isAuthenticated = authService.isAuthenticated();
-        const user = authService.getCurrentUser();
-        
+    let cancelled = false;
+
+    authService.restoreSession()
+      .then(user => {
+        if (cancelled) return;
         setState({
-          isAuthenticated,
+          isAuthenticated: !!user,
           user,
           loading: false,
           error: null
         });
-      } catch (error) {
+      })
+      .catch(() => {
+        if (cancelled) return;
         setState({
           isAuthenticated: false,
           user: null,
           loading: false,
           error: 'Failed to restore authentication state'
         });
-      }
+      });
+
+    const { data: { subscription } } = authService.onAuthStateChange(user => {
+      if (cancelled) return;
+      setState({
+        isAuthenticated: !!user,
+        user,
+        loading: false,
+        error: null
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
     };
-    
-    checkAuth();
   }, []);
 
   // Login function

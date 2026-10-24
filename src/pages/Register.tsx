@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Separator } from '../components/ui/separator';
 
+const brandMark = new URL('brand/veritas-mark.png', document.baseURI).href;
+
 const RegisterInner = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -61,17 +63,30 @@ const RegisterInner = () => {
   };
   
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4 overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-paper p-4 overflow-hidden">
       <div className="flex flex-row w-full max-w-7xl gap-8 h-screen items-center">
         {/* Promotional Content - Left Side */}
         <div className="flex-1 h-full overflow-y-auto py-8 pr-4 hide-scrollbar">
+          <div className="flex items-center gap-3 mb-6">
+            <img src={brandMark} alt="Veritas Global AI" className="h-10 w-10 object-contain" />
+            <div>
+              <div className="flex items-baseline gap-1.5 leading-tight">
+                <span className="font-serif text-lg font-semibold text-ink">Veritas</span>
+                <span className="text-base font-medium text-ink">SynapseCore</span>
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
+                AI Agent + Vector Vault
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 mb-6">
-            <h1 className="text-4xl font-bold tracking-tight">Meet AI SuperAgent</h1>
-            <p className="text-xl text-gray-500 dark:text-gray-400">
+            <h1 className="text-4xl font-semibold tracking-tight text-ink">Meet Veritas SynapseCore</h1>
+            <p className="text-xl text-muted-foreground">
               The only agent that remembers everything and runs everything.
             </p>
-            <p className="text-gray-600 dark:text-gray-300">
-              Live VectorVault memory + plug-and-play MCP tools. Drag-and-drop docs, paste any API key, and let 2,550+ actions run themselves.
+            <p className="text-muted-foreground">
+              Live Vector Vault memory + plug-and-play MCP tools. Drag-and-drop docs, paste any API key, and let 2,550+ actions run themselves.
             </p>
           </div>
           
@@ -85,7 +100,9 @@ const RegisterInner = () => {
           </div>
           
           <div className="mb-6">
-            <div className="text-sm bg-secondary text-secondary-foreground rounded-md px-2 py-1 inline-block">SynasporeCore + VectorVault – Zero Amnesia AI</div>
+            <div className="text-sm bg-navy text-paper rounded-md px-3 py-1.5 inline-block">
+              Veritas SynapseCore + Vector Vault — Zero Amnesia AI
+            </div>
           </div>
           
           <Separator className="my-6" />
@@ -93,46 +110,46 @@ const RegisterInner = () => {
           <div className="grid grid-cols-3 gap-8">
             {/* Why Memory Matters */}
             <div>
-              <h3 className="text-lg font-medium mb-4">Why Memory Matters</h3>
+              <h3 className="text-lg font-medium mb-4 text-ink">Why Memory Matters</h3>
               <div className="space-y-3">
                 <div>
-                  <p className="font-medium">Context Windows Forget</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Traditional agents hallucinate because they lose context after each conversation.</p>
+                  <p className="font-medium text-ink">Context Windows Forget</p>
+                  <p className="text-sm text-muted-foreground">Traditional agents hallucinate because they lose context after each conversation.</p>
                 </div>
                 <div>
-                  <p className="font-medium">VectorVault Remembers</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Every chat & doc stored as live embeddings for instant recall, zero re-upload.</p>
+                  <p className="font-medium text-ink">Vector Vault Remembers</p>
+                  <p className="text-sm text-muted-foreground">Every chat &amp; doc stored as live embeddings for instant recall, zero re-upload.</p>
                 </div>
                 <div>
-                  <p className="font-medium">Persistent Knowledge</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Reusable knowledge across teams and sessions that never gets lost.</p>
+                  <p className="font-medium text-ink">Persistent Knowledge</p>
+                  <p className="text-sm text-muted-foreground">Reusable knowledge across teams and sessions that never gets lost.</p>
                 </div>
               </div>
             </div>
             
             {/* How It Works */}
             <div>
-              <h3 className="text-lg font-medium mb-4">How It Works</h3>
+              <h3 className="text-lg font-medium mb-4 text-ink">How It Works</h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
-                  <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</div>
+                  <div className="bg-navy text-paper rounded-full w-6 h-6 flex items-center justify-center text-sm">1</div>
                   <div>
-                    <p className="font-medium">Drop & Paste</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Drop docs or paste API keys once.</p>
+                    <p className="font-medium text-ink">Drop &amp; Paste</p>
+                    <p className="text-sm text-muted-foreground">Drop docs or paste API keys once.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</div>
+                  <div className="bg-navy text-paper rounded-full w-6 h-6 flex items-center justify-center text-sm">2</div>
                   <div>
-                    <p className="font-medium">Auto-Index</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">VectorVault auto-indexes; MCP tools auto-register.</p>
+                    <p className="font-medium text-ink">Auto-Index</p>
+                    <p className="text-sm text-muted-foreground">VectorVault auto-indexes; MCP tools auto-register.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</div>
+                  <div className="bg-navy text-paper rounded-full w-6 h-6 flex items-center justify-center text-sm">3</div>
                   <div>
-                    <p className="font-medium">Execute</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Ask in chat: @web-scrape → @midjourney → @slack</p>
+                    <p className="font-medium text-ink">Execute</p>
+                    <p className="text-sm text-muted-foreground">Ask in chat: @web-scrape → @midjourney → @slack</p>
                   </div>
                 </div>
               </div>
@@ -140,25 +157,25 @@ const RegisterInner = () => {
             
             {/* Tools at Your Fingertips */}
             <div>
-              <h3 className="text-lg font-medium mb-4">Tools at Your Fingertips</h3>
+              <h3 className="text-lg font-medium mb-4 text-ink">Tools at Your Fingertips</h3>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
+                <div className="bg-white border border-line rounded p-2"></div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">2,550+ integrations and counting</p>
+              <p className="text-xs text-muted-foreground mt-2">2,550+ integrations and counting</p>
             </div>
           </div>
         </div>
         
         {/* Registration Form - Right Side */}
         <div className="w-96">
-          <Card>
+          <Card className="border-line">
             <CardHeader>
-              <CardTitle>Create Account</CardTitle>
+              <CardTitle className="text-2xl font-semibold text-ink">Create Account</CardTitle>
               <CardDescription>Enter your information to create an account</CardDescription>
             </CardHeader>
             <CardContent>

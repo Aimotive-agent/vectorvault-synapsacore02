@@ -18,7 +18,7 @@ import VectorBaseSelector from '../vectorvault/VectorBaseSelector';
 import SaveToVaultButton from '../vectorvault/SaveToVaultButton';
 import { AppContext } from '../vectorvault/contexts/AppContext';
 import vectorRetrievalService from '@/services/vectorRetrievalService';
-import geminiService from '../vectorvault/services/geminiService';
+import aiProviderService from '@/services/aiProviderService';
 
 interface AIChatProps {
   servers: MCPServer[];
@@ -78,7 +78,13 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
 
     if (isVectorVault) {
       try {
-        const responseText = await geminiService.generateChatResponse(newMessages);
+        const responseText = await aiProviderService.chat(
+          newMessages.map(m => ({
+            role: m.role === 'system' ? 'system' as const : m.role === 'user' ? 'user' as const : 'assistant' as const,
+            content: m.content,
+          })),
+          settings
+        );
         const botMessage: ChatMessage = {
           id: `asst_${Date.now()}`,
           role: 'assistant',
@@ -101,7 +107,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       }
     }
 
-    // Use Gemini service as fallback when no API key is provided
+    // Send to the selected provider — or the Veritas gateway when no API key is set
     try {
       let augmentedPrompt = inputMessage;
       if (selectedKbId) {
@@ -123,8 +129,11 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
       };
       setMessages(prev => [...prev, thinkingMessage]);
 
-      // Call Gemini service with the augmented prompt
-      const responseText = await geminiService.generateResponse(augmentedPrompt);
+      // Call the AI provider with the augmented prompt
+      const responseText = await aiProviderService.chat(
+        [{ role: 'user', content: augmentedPrompt }],
+        settings
+      );
       
       // Replace thinking message with actual response
       const botMessage: ChatMessage = {
@@ -185,7 +194,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <BrainIcon className="h-6 w-6 text-indigo-400" />
+              <BrainIcon className="h-6 w-6 text-gold" />
               AI Chat
             </CardTitle>
             <CardDescription>Interact with AI, tools, and vector bases.</CardDescription>
@@ -219,7 +228,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
                     <BotIcon className="text-primary" />
                   </div>
                 )}
-                <div className={`max-w-[75%] p-3 rounded-lg ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                <div className={`max-w-[75%] p-3 rounded-lg ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-white border border-line'}`}>
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   {message.toolCalls && message.toolCalls.length > 0 && (
                     <div className="mt-2 space-y-2">
@@ -230,7 +239,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
                             <WrenchIcon className="h-4 w-4 text-muted-foreground" />
                             <span className="font-mono">{call.name}</span>
                           </div>
-                          <pre className="text-xs mt-1 p-1 bg-black rounded-md text-white overflow-x-auto">{JSON.stringify(call.arguments, null, 2)}</pre>
+                          <pre className="text-xs mt-1 p-1 bg-navy-deep rounded-md text-white overflow-x-auto">{JSON.stringify(call.arguments, null, 2)}</pre>
                         </div>
                       ))}
                     </div>
@@ -262,7 +271,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <BotIcon className="text-primary" />
                     </div>
-                    <div className="p-3 rounded-lg bg-muted">
+                    <div className="p-3 rounded-lg bg-white border border-line">
                         <Loader2Icon className="h-5 w-5 animate-spin text-primary" />
                     </div>
                 </div>
@@ -277,7 +286,7 @@ export const AIChat = ({ servers, tools, settings, onSettingsChange, availableMo
               className="flex-shrink-0"
             />
             {selectedKbId && (
-              <Badge variant="outline" className="text-indigo-400 border-indigo-400/50">
+              <Badge variant="outline" className="text-gold border-gold/50">
                 Vector base selected
               </Badge>
             )}

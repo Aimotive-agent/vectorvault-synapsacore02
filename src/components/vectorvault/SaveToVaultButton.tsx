@@ -50,10 +50,10 @@ const SaveToVaultButton: React.FC<SaveToVaultButtonProps> = ({
         disabled={!selectedKbId || isSaving || isSaved}
         className={`p-1.5 rounded-md transition-colors ${
           isSaved 
-            ? 'bg-green-600 text-white' 
+            ? 'bg-success text-white' 
             : selectedKbId 
-              ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-              : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              ? 'bg-navy hover:bg-navy-deep text-white' 
+              : 'bg-line text-muted-foreground cursor-not-allowed'
         } ${className}`}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
@@ -66,7 +66,7 @@ const SaveToVaultButton: React.FC<SaveToVaultButtonProps> = ({
       </button>
       
       {showTooltip && (
-        <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap">
+        <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-navy-deep text-white text-xs py-1 px-2 rounded whitespace-nowrap">
           {!selectedKbId 
             ? 'Select a vector base first' 
             : isSaved 
