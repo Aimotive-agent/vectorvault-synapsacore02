@@ -31,17 +31,10 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: [
-        'react/jsx-runtime',
-        'module',
-        'fs',
-        'path',
-        'os',
-        'crypto',
-        'buffer',
-        'stream',
-        'util'
-      ],
+      // Do NOT mark react/jsx-runtime or node builtins as external here:
+      // externals end up as bare import specifiers in the browser bundle and
+      // kill the app at load ("Failed to resolve module specifier").
+      // vite-plugin-node-polyfills shims any node builtin a dependency needs.
     },
   },
   define: {
