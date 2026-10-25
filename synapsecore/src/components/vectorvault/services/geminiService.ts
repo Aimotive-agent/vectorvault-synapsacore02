@@ -4,8 +4,8 @@ import { ChatMessage as SynapseCoreChatMessage } from '@/types/mcp';
  * Service for interacting with Google's Gemini API
  */
 export class GeminiService {
-  // Hardcoded API key for VectorVault app only
-  private apiKey: string = 'REDACTED_GEMINI_API_KEY';
+  // API key comes from the build environment — never hardcode keys here.
+  private apiKey: string = import.meta.env?.VITE_GEMINI_API_KEY ?? '';
   private model = 'gemini-1.5-flash';
   private baseUrl: string = 'https://generativelanguage.googleapis.com/v1/models';
 

@@ -58,9 +58,12 @@ const getAiClient = (): GoogleGenAI | null => {
         return ai;
     }
     try {
-        // Use the hardcoded API key for testing purposes
-        const apiKey = 'REDACTED_GEMINI_API_KEY';
-        console.log('Using API key:', apiKey);
+        // API key comes from the build environment — never hardcode keys here.
+        const apiKey = import.meta.env?.VITE_GEMINI_API_KEY ?? '';
+        if (!apiKey) {
+            console.warn('Gemini API key not configured (VITE_GEMINI_API_KEY) — AI features disabled.');
+            return null;
+        }
         ai = new GoogleGenAI({ apiKey });
         return ai;
     } catch (error) {
