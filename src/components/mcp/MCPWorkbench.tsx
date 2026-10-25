@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { MCPServer, MCPTool, LogEntry, AISettings } from '@/types/mcp';
+import { uuid } from '@/utils/uuid';
 import { MCPServerForm } from './MCPServerForm';
 import { ConnectedServers } from './ConnectedServers';
 import { AvailableTools } from './AvailableTools';
@@ -473,7 +474,7 @@ export const MCPWorkbench = () => {
       const discoveredTools = await discoverTools(url);
       
       const newServer: MCPServer = {
-        id: crypto.randomUUID(),
+        id: uuid(),
         name,
         url,
         status: 'connected',
